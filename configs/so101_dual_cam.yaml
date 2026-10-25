@@ -1,0 +1,111 @@
+# ~/robot/so101-lab/configs/so101_dual_cam.yaml
+#
+# デバイス固有の値（シリアル・IP）は gitignored configs/lab.local.env に置き、
+# 起動時に so101_common.env がここへ流し込む。テンプレート:
+#   cp configs/lab.local.env.example configs/lab.local.env
+#
+# 対応する環境変数:
+#   robot.follower_arm.port           ← SO101_FOLLOWER_PORT
+#   robot.leader_arm.port             ← SO101_LEADER_PORT
+#   cameras.center_xiao.url           ← SO101_CAMERA_XIAO_URL
+#   cameras.center_d435.serial_number ← SO101_REALSENSE_SERIAL
+#   cameras.wrist_follower.device     ← SO101_WRIST_FOLLOWER_DEVICE
+#   cameras.wrist_leader.device       ← SO101_WRIST_LEADER_DEVICE
+#
+# 調べ方:
+#   - アーム: ls /dev/serial/by-id/ または lerobot-find-port
+#     （by-id 推奨。/dev/ttyACM* の番号は挿し直すと変わる）
+#   - RealSense: lerobot-find-cameras / pyrealsense2
+#   - wrist カメラ: v4l2-ctl --list-devices（同型番が2台ある場合は
+#     /dev/v4l/by-path/ の USB ポート固定で区別する）
+#
+# Cameras (OpenCV / Xiao・ESP32 MJPEG / RealSense):
+#   - USB webcam: class OpenCVCamera + index OR device: /dev/video0
+#       also: sudo usermod -aG video <user>  (then re-login)
+#   - Xiao / ESP32 camera server: class OpenCVCamera + url (MJPEG)
+#       see docs/05_cameras.md
+#   - RealSense D435: class RealSenseCamera + serial_number
+#   - Disable any cam with enabled: false
+# Offline cameras are skipped at Web Remote startup (arm still runs).
+#
+# Center switch (Web Remote / cameras-only / Quest stream name stays "center"):
+#   center_source: xiao | d435
+#   override for one run:  CENTER_SOURCE=d435 ./scripts/start_camera_server.sh
+# D435 depth preview (Web Remote MJPEG): use_depth + preview on center_d435
+#   → streams d435 / d435_depth (or center / center_depth when CENTER_SOURCE=d435)
+
+robot:
+  type: so101
+  follower_arm:
+    port: ""  # ← SO101_FOLLOWER_PORT (configs/lab.local.env)
+    # full = 通常の駆動腕（7.4V / 12V follower とも同じプロファイル名）
+    drive_profile: full
+  # Web Remote では leader ポートも so101_follower として駆動（ブラウザ操作）。
+  # 要キャリブ: --robot.id=my_leader_drive
+  #
+  # 2026-10 暫定: 物理 leader は駆動トルク不足のため Web Remote 第2腕は OFF。
+  # ACT / SmolVLA 片腕 IL（デモは so101_leader 手テレオペ）→ docs/14_single_arm_il.md
+  # 起動時だけ切る場合: ./scripts/start_web_remote.sh --no-leader
+  # 第2駆動腕を復活させるとき（follower 換装後）は enabled: true + drive_profile: full
+  #
+  # drive_profile:
+  #   gentle_7v4 — 物理 leader（7.4V・低減速比）を暫定の第2駆動腕にするとき
+  #   full / follower_12v — 第2腕を本物の follower（できれば 12V）に換装したらこれに変更
+  #   ※ 7.4V leader モータに 12V 電源を入れないこと
+  leader_arm:
+    enabled: true
+    port: ""  # ← SO101_LEADER_PORT (configs/lab.local.env)
+    drive_profile: gentle_7v4
+    # Web「Leader follow」モード用（so101_leader 手テレオペ）。駆動 id の my_leader_drive とは別。
+    teleop_id: my_leader
+
+# Active center feed → published as stream name "center".
+# Env CENTER_SOURCE overrides this (xiao | d435 | center_xiao | center_d435).
+center_source: xiao
+
+cameras:
+
+  # --- Center candidates (exactly one opens as "center") ---
+  center_xiao:
+    class: OpenCVCamera
+    enabled: true
+    url: ""  # ← SO101_CAMERA_XIAO_URL (例: http://<xiao-ip>:81/stream)
+    fps: 15
+    width: 640
+    height: 480
+
+  # Intel RealSense D435 (USB3). Serial from pyrealsense2 / lerobot-find-cameras.
+  # preview: true → center_source が xiao のときも RGB+深度プレビューを開く
+  #   ストリーム名: d435 / d435_depth（center には載せない）
+  # CENTER_SOURCE=d435 のときは center / center_depth
+  center_d435:
+    class: RealSenseCamera
+    enabled: true
+    serial_number: ""  # ← SO101_REALSENSE_SERIAL
+    fps: 30
+    width: 640
+    height: 480
+    use_depth: true
+    preview: true
+
+  # Tip cams — one per arm. 同型番が2台ある場合は by-path（USB ポート固定）で区別。
+  # MJPG 推奨。D435 は USB3 直結（Bus 002）へ分離すると帯域が安定する。
+  wrist_follower:
+    class: OpenCVCamera
+    enabled: true
+    device: ""  # ← SO101_WRIST_FOLLOWER_DEVICE (/dev/v4l/by-path/...)
+    fourcc: MJPG
+    fps: 30
+    width: 640
+    height: 480
+
+  wrist_leader:
+    class: OpenCVCamera
+    enabled: true
+    device: ""  # ← SO101_WRIST_LEADER_DEVICE (/dev/v4l/by-path/...)
+    fourcc: MJPG
+    fps: 30
+    width: 640
+    height: 480
+
+warmup_delay_seconds: 5

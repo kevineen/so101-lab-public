@@ -1,0 +1,33 @@
+# real_eval 設定の雛形 — コピーして使う:
+#   cp apps/real_eval/configs/real_eval.example.yaml apps/real_eval/configs/real_eval.local.yaml
+# 正本: docs/18_real_eval.md（安全手順・goal 計測・calibrate の流れ）
+
+sim2rl_root: ~/robot/sim2rl
+run_dir: ~/robot/sim2rl/runs/20261018_000000_mujoco_reach     # 該当 run に書き換える
+checkpoint: best            # export_onnx --checkpoint と対応（CSV 記録用）
+
+# 実機。configs/lab.local.env の SO101_FOLLOWER_PORT と同じ by-id パスを書く
+port: /dev/serial/by-id/<your-follower-by-id>
+robot_id: my_follower
+max_relative_target: 5      # deg / cycle（docs/17 推論クライアントと同じ）
+
+# 評価プロトコル
+goal_m: [0.25, -0.10, 0.15]   # URDF base_link 系・メートル。--probe で実測して書く
+episodes: 10
+steps_per_episode: 150        # sim2rl reach と同じ
+rate_hz: 20
+cmd_timeout_s: 0.5
+success_threshold_m: 0.03
+
+# 座標合わせ（--calibrate-offsets で実測した値に差し替える。
+# scale は度→rad。向きが逆の関節は負に。gripper は %→m 既定を自動設定）
+joint_map:
+  shoulder_pan: {scale: 0.017453292519943295, offset: 0.0}
+  shoulder_lift: {scale: 0.017453292519943295, offset: 0.0}
+  elbow_flex: {scale: 0.017453292519943295, offset: 0.0}
+  wrist_flex: {scale: 0.017453292519943295, offset: 0.0}
+  wrist_roll: {scale: 0.017453292519943295, offset: 0.0}
+  # gripper は省略可（LeRobot 0..100 → URDF 全範囲の既定）
+
+operator: your-name         # または configs/lab.local.env の SO101_OPERATOR
+notes: ""

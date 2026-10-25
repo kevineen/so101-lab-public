@@ -1,0 +1,91 @@
+# Vendor checkout (separate git repo: kevineen/lerobot)
+vendor/*
+!vendor/README.md
+
+# Python
+.venv/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Env / secrets
+*.env
+!.env.example
+**/.env
+!**/.env.example
+
+# Data artifacts
+data/**/datasets/
+data/**/videos/
+data/**/*.mp4
+data/**/*.hdf5
+data/**/*.parquet
+data/**/checkpoints/
+*.pt
+*.pth
+*.onnx
+*.ckpt
+
+# Experiment runtime
+# （artifacts は「ディレクトリ」ではなく中身だけ無視する。ディレクトリ自体を
+#   無視すると ! 否定でも内側のファイルを tracking できなくなるため）
+experiments/**/artifacts/*
+experiments/**/runs/
+experiments/**/logs/
+
+# Local MLflow (sqlite, artifacts, optional copied videos). Do not commit.
+mlflow_store/
+mlruns/
+mlartifacts/
+wandb/
+experiments/so101_trainswap/env/wsl.env
+experiments/so101_trainswap/env/pi.env
+experiments/so101_trainswap/artifacts/*
+!experiments/so101_trainswap/artifacts/.gitignore
+
+# Personal verification progress (cp from docs/checklists/*.checklist.md)
+docs/checklists/*.local.md
+
+# Quest teleop settings UI live overrides (merged over quest_teleop.yaml)
+configs/quest_teleop.local.overrides.yaml
+
+# Lab host inventory (personal IPs/SSH). Template: lab_hosts.yaml.example
+configs/lab_hosts.yaml
+
+# Lab-local device/host values + model catalog (copied from *.example,
+# see configs/lab.local.env.example). configs/lab.local.env は *.env ルールで除外済み
+configs/*.local.yaml
+configs/*.local.json
+
+# Personal one-off tooling & dated run queues (kept on disk, not published).
+# 学習キューの正本手順は docs/16_local_mlflow.md
+scripts/cast_bedroom.js
+scripts/bedroom-bin/
+scripts/run_*_queue_*.sh
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# uv / tooling（uv.lock はコミットする: 環境再現のため）
+.python-version
+
+# MkDocs build output
+site/
+
+# real_eval personal config (copied from real_eval.example.yaml)
+apps/real_eval/configs/*.local.yaml
+
+# Offline single-file docs export (make docs-print)
+print/
+
+logs/

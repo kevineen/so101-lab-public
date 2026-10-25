@@ -1,0 +1,46 @@
+# Local MLflow tracking server (docs/16_local_mlflow.md).
+# Store stays on the host under mlflow_store/ (gitignored).
+#
+#   docker compose up -d mlflow
+#   # or: ./scripts/start_mlflow.sh
+#
+# UI: http://127.0.0.1:5000
+# Training clients already prefer HTTP when :5000 is open (tracking/logger.py).
+
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.22.1
+    container_name: so101-mlflow
+    ports:
+      - "${SO101_MLFLOW_PORT:-5000}:5000"
+    volumes:
+      - ${SO101_MLFLOW_STORE:-./mlflow_store}:/mlflow
+    environment:
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    command:
+      - mlflow
+      - server
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --backend-store-uri
+      - sqlite:////mlflow/mlflow.db
+      - --default-artifact-root
+      - mlflow-artifacts:/
+      - --serve-artifacts
+      - --artifacts-destination
+      - /mlflow/artifacts
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped

@@ -1,0 +1,34 @@
+{
+  "task": "Pick the red neck of snake and place drop in the silver bowl",
+  "models": [
+    {
+      "id": "SB1",
+      "label": "ACT",
+      "policy_type": "act",
+      "path": "$HOME/robot/lerobot/outputs/train/act_snakebowl_frontwrist-base_20261023/checkpoints/last/pretrained_model",
+      "actions_per_chunk": 100
+    },
+    {
+      "id": "SB2",
+      "label": "Diffusion",
+      "policy_type": "diffusion",
+      "path": "$HOME/robot/lerobot/outputs/train/diffusion_snakebowl_frontwrist-base_20261023/checkpoints/last/pretrained_model",
+      "actions_per_chunk": 32
+    },
+    {
+      "id": "SB3",
+      "label": "TurboVLA",
+      "policy_type": "turbovla",
+      "path": "$HOME/robot/lerobot/outputs/train/turbovla_snakebowl_frontwrist-base_20261023/checkpoints/last/pretrained_model",
+      "actions_per_chunk": 12
+    },
+    {
+      "id": "SB4",
+      "label": "SmolVLA",
+      "policy_type": "smolvla",
+      "path": "$HOME/robot/lerobot/outputs/train/smolvla_snakebowl_frontwrist-base_20261023/checkpoints/last/pretrained_model",
+      "actions_per_chunk": 50,
+      "optional": true
+    }
+  ]
+}

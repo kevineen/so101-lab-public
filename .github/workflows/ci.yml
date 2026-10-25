@@ -1,0 +1,60 @@
+# so101-lab CI — docs ビルドとハードウェア不要テスト。
+# 重い実環境テスト（lerobot フォーク venv 必要）は manual フルジョブで回す。
+# 実機テストは CI の対象外（docs/03_web_remote.md のチェックリストで人力検証）。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  docs:
+    name: mkdocs strict build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Sync docs tooling (locked)
+        run: uv sync --locked --group docs
+      - name: Build docs (strict)
+        run: uv run mkdocs build --strict
+
+  unit:
+    name: unit tests (no hardware, no lerobot)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Run so101_common tests
+        run: |
+          uv venv
+          uv pip install pytest
+          PYTHONPATH=. uv run pytest so101_common -q
+
+  integration:
+    name: full tests on lerobot fork env (manual)
+    # 重い: lerobot フォークの venv 作成（torch 等の大容量ダウンロード）を伴う。
+    # web_remote / bridges / tracking / real_eval のスイートはフォークの API
+    # （lerobot.cameras 等）に依存するため、PyPI 版では動かない。
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Clone lerobot fork (frs branch)
+        run: |
+          mkdir -p $HOME/robot
+          git clone --depth 1 --branch frs https://github.com/kevineen/lerobot.git $HOME/robot/lerobot
+      - name: Sync fork environment
+        run: cd $HOME/robot/lerobot && uv sync --extra feetech
+      - name: Install test-only deps into fork venv
+        run: |
+          uv pip install --python $HOME/robot/lerobot/.venv/bin/python \
+            pytest websockets fastapi 'uvicorn[standard]' pyyaml deepdiff mujoco
+      - name: Run suites (PYTHONPATH mirrors scripts/*.sh)
+        run: |
+          PY=$HOME/robot/lerobot/.venv/bin/python
+          PYTHONPATH=. $PY -m pytest so101_common web_remote tracking bridges/isaacteleop_to_so101 -q
+          PYTHONPATH=.:apps/real_eval $PY -m pytest apps/real_eval/tests -q

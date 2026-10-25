@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeRobot Dataset Curator</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">🎞 LeRobot Curator</div>
+  <div id="dataset-title">読み込み中...</div>
+  <div class="spacer"></div>
+  <div id="save-status" class="save-ok">保存済み</div>
+  <button id="btn-apply" class="primary">適用 (新しいデータセットへ書き出し)</button>
+</header>
+
+<div id="main">
+
+  <aside id="sidebar">
+    <div class="side-controls">
+      <select id="task-filter" title="タスクで絞り込み"></select>
+      <div class="chips" id="status-filter">
+        <button data-f="all" class="active">すべて</button>
+        <button data-f="unreviewed">未確認</button>
+        <button data-f="reviewed">確認済</button>
+        <button data-f="trim">トリム</button>
+        <button data-f="delete">削除</button>
+      </div>
+    </div>
+    <ul id="episode-list"></ul>
+    <div id="sidebar-summary"></div>
+  </aside>
+
+  <section id="content">
+
+    <div id="delete-ribbon" hidden>このエピソードは削除予定 (D で解除)</div>
+
+    <div id="players"></div>
+
+    <div id="episode-info">
+      <span id="ep-title"></span>
+      <span id="ep-task"></span>
+      <span id="ep-warning" class="warning" hidden></span>
+    </div>
+
+    <canvas id="timeline"></canvas>
+
+    <div id="transport">
+      <button id="btn-prev-ep" title="前のエピソード (↑)">⏮</button>
+      <button id="btn-frame-back" title="1フレーム戻る (←)">◀|</button>
+      <button id="btn-play" title="再生/停止 (Space)">▶</button>
+      <button id="btn-frame-fwd" title="1フレーム進む (→)">|▶</button>
+      <button id="btn-next-ep" title="次のエピソード (↓)">⏭</button>
+
+      <span class="readout" id="frame-readout">-</span>
+
+      <span class="divider"></span>
+
+      <button id="btn-in" title="イン点を設定 (I)">[ I ]</button>
+      <span class="readout" id="trim-readout">トリムなし</span>
+      <button id="btn-out" title="アウト点を設定 (O)">[ O ]</button>
+      <button id="btn-clear-trim" title="トリム解除 (X)">✕トリム</button>
+
+      <span class="divider"></span>
+
+      <button id="btn-delete" title="削除トグル (D)">🗑 削除</button>
+
+      <span class="spacer"></span>
+      <button id="btn-help" title="ショートカット (?)">⌨</button>
+    </div>
+
+    <div id="shortcuts-help" hidden>
+      <table>
+        <tr><td>Space</td><td>再生 / 停止</td><td>← / →</td><td>±1フレーム</td></tr>
+        <tr><td>Shift+← / →</td><td>±1秒 (J / L も同じ)</td><td>K</td><td>停止</td></tr>
+        <tr><td>I / O</td><td>イン点 / アウト点を設定</td><td>X</td><td>トリム解除</td></tr>
+        <tr><td>D</td><td>エピソード削除トグル</td><td>↑ / ↓</td><td>前/次エピソード</td></tr>
+        <tr><td>Home / End</td><td>イン点 / アウト点へ移動</td><td>?</td><td>このヘルプ</td></tr>
+      </table>
+      <div class="hint">タイムライン: クリックでシーク・青の ⟦⟧ ハンドルをドラッグでイン/アウト調整</div>
+    </div>
+
+  </section>
+</div>
+
+<dialog id="apply-dialog">
+  <h2>キュレーションを適用</h2>
+  <div id="apply-summary"></div>
+  <div class="apply-form">
+    <label>出力 repo-id <input id="apply-repo-id" type="text"></label>
+    <label>出力先 <input id="apply-root" type="text"></label>
+    <label class="chk"><input type="checkbox" id="apply-overwrite"> 既存の出力先があれば上書き</label>
+  </div>
+  <div class="dialog-buttons">
+    <button id="apply-close">閉じる</button>
+    <button id="apply-start" class="primary">適用開始</button>
+  </div>
+  <pre id="apply-log" hidden></pre>
+  <div id="apply-result" hidden></div>
+</dialog>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

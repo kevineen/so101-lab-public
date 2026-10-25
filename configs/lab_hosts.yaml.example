@@ -1,0 +1,279 @@
+# ラボ PC 構成（単一ファイル）。エージェントが読む正本。
+#
+# 各マシンで初回だけ:
+#   cp configs/lab_hosts.yaml.example configs/lab_hosts.yaml
+#   # this_host と各ホストの network / hardware / ssh を編集
+#
+# configs/lab_hosts.yaml は gitignore。個人の IP をコミットしないこと。
+# 人間向け手順: docs/07_multi_host.md · 転送コマンド: docs/23_data_transfer.md
+
+version: 1
+updated: "2026-10-22"
+
+# いまのシェルが動いているマシン（下の hosts のキー）。
+# clone ごとに設定: pi | gpu | thor | quest_pc
+this_host: gpu
+
+default_ssh_user: <user>
+
+# パス規約（特記がなければ全ホストで同じ相対構造）。
+paths:
+  robot_root: ~/robot
+  so101_lab: ~/robot/so101-lab
+  lerobot: ~/robot/lerobot
+  datasets: ~/.cache/huggingface/lerobot/local/<name>/
+  dataset_meta_required: meta/info.json
+  train_outputs: ~/robot/lerobot/outputs/train/<job>/
+  thor_infer_weights: ~/<job>/   # pretrained_model の中身を直置き
+  pi_policy_cache: ~/.cache/lerobot/policies/<job>/
+  mlflow_store: ~/robot/so101-lab/mlflow_store/
+
+# 転送先を変えたら configs/dataset.local.env も合わせて更新する。
+dataset_offload:
+  ssh: ${SO101_GPU_SSH}
+  dir: $HOME/.cache/huggingface/lerobot
+  delete_local_after_success: true
+
+# データ／制御の流れ（詳細と rsync は docs/23）。
+transfers:
+  - id: demo_pi_to_gpu
+    what: LeRobot local dataset tree
+    from: pi
+    to: gpu
+    required: true
+    note: 録画後の正経路。configs/dataset.local.env で自動転送可
+  - id: ckpt_gpu_to_thor
+    what: checkpoints/last/pretrained_model/
+    from: gpu
+    to: thor
+    required: true
+    note: policy_server 推論用
+  - id: demo_gpu_to_thor
+    what: LeRobot local dataset tree
+    from: gpu
+    to: thor
+    required: false
+    note: Thor で学習する退避時のみ
+  - id: control_pi_thor_grpc
+    what: observations / action chunks
+    from: pi
+    to: thor
+    protocol: grpc
+    port: 8080
+    note: Pi が腕・カメラ、Thor が policy_server
+
+# 同一マシンで同時起動してはいけない組み合わせ（docs/07）。
+exclusivity_forbidden:
+  - [lelab, web_remote]
+  - [lelab, molmoact2_robot_client]
+  - [web_remote, molmoact2_robot_client]
+  - [web_remote, quest_bridge]
+  - [lelab, quest_bridge]
+  - [molmoact2_robot_client, quest_bridge]
+
+exclusivity_allowed:
+  - [cameras_only_web_remote, quest_bridge]
+
+hosts:
+  pi:
+    display_name: Raspberry Pi
+    roles:
+      - so101_usb_serial
+      - cameras
+      - lelab
+      - web_remote
+      - record_demos
+      - inference_client  # Thor への gRPC クライアント。Pi4 では重い ACT 順伝播はしない
+    does_not:
+      - full_act_train
+      - heavy_vla_train
+    os_hint: Raspberry Pi OS / aarch64
+    # --- ラボごとに記入 ---
+    network:
+      hostname: so101pi
+      lan_ip: ${SO101_PI_LAN_IP}
+      tailscale_name: null
+      tailscale_ip: null
+      ssh: <user>@${SO101_PI_LAN_IP}
+    repos:
+      - ~/robot/so101-lab
+      - ~/robot/lerobot
+    data_held:
+      - kind: demos_ephemeral
+        path: ~/.cache/huggingface/lerobot/local/<name>/
+        note: 残す本は gpu へ移すのが原則。dataset.local.env 参照
+      - kind: policy_cache_optional
+        path: ~/.cache/lerobot/policies/<job>/
+    services:
+      - name: lelab
+        port: 8000
+        proto: tcp
+      - name: web_remote
+        port: 8765
+        proto: tcp
+      - name: quest_bridge
+        port: 8870
+        proto: tcp
+        path: /teleop
+    docs:
+      - docs/07_multi_host.md
+      - docs/14_single_arm_il.md
+      - docs/15_dataset_pipeline.md
+      - docs/23_data_transfer.md
+
+  gpu:
+    display_name: Main GPU PC (WSL)
+    roles:
+      - dataset_canonical_store
+      - lerobot_train
+      - mlflow
+      - checkpoint_source_for_thor
+    aliases:
+      - gpu
+      - wsl_4090
+    does_not:
+      - so101_usb_serial
+    os_hint: Windows host + WSL2 Ubuntu
+    # --- ラボごとに記入 ---
+    hardware:
+      gpu: NVIDIA GeForce RTX 4090
+      vram_mib: 24564
+    network:
+      hostname: LLM
+      lan_ip: ${SO101_GPU_LAN_IP}
+      tailscale_name: gpu
+      tailscale_ip: ${SO101_GPU_TAILSCALE_IP}
+      ssh: ${SO101_GPU_SSH}
+    repos:
+      - ~/robot/so101-lab
+      - ~/robot/lerobot
+      - ~/robot/sim2rl
+      - ~/robot/IsaacTeleop
+    data_held:
+      - kind: demos_canonical
+        path: ~/.cache/huggingface/lerobot/local/<name>/
+        note: Pi からの転送後の正本保管場所
+      - kind: train_outputs
+        path: ~/robot/lerobot/outputs/train/<job>/
+      - kind: mlflow
+        path: ~/robot/so101-lab/mlflow_store/
+    services:
+      - name: mlflow_ui
+        port: 5000
+        proto: tcp
+      - name: cloudxr_media
+        port: 47998
+        proto: udp
+        note: Quest 経路。docs/08 参照
+      - name: cloudxr_signaling
+        port: 49100
+        proto: tcp
+      - name: cloudxr_wss
+        port: 48322
+        proto: tcp
+    docs:
+      - docs/16_local_mlflow.md
+      - docs/17_act_record_train_infer.md
+      - docs/19_vram_guide.md
+      - docs/23_data_transfer.md
+
+  thor:
+    display_name: Jetson Thor
+    roles:
+      - policy_server
+      - gpu_infer_act
+      - gpu_infer_molmoact2
+      - gpu_infer_pi05
+      - optional_lora_train_fallback
+    aliases:
+      - thor
+    does_not:
+      - so101_usb_serial
+    os_hint: Jetson Linux
+    # --- ラボごとに記入 ---
+    network:
+      hostname: thor
+      lan_ip: null
+      tailscale_name: thor
+      tailscale_ip: ${SO101_THOR_TAILSCALE_IP}
+      ssh: <user>@${SO101_THOR_TAILSCALE_IP}
+    repos:
+      - ~/robot/so101-lab
+      - ~/robot/lerobot
+    data_held:
+      - kind: infer_weights
+        path: ~/<job>/
+        note: pretrained_model の中身を直置き（policy_server 用）
+      - kind: demos_when_training
+        path: ~/.cache/huggingface/lerobot/local/<name>/
+        note: Thor 上で学習するときだけ
+    services:
+      - name: policy_server
+        port: 8080
+        proto: tcp
+        note: Pi からのみ許可する
+    docs:
+      - docs/10_molmoact2_thor.md
+      - docs/17_act_record_train_infer.md
+      - docs/21_pi05_thor.md
+      - docs/23_data_transfer.md
+
+  quest_pc:
+    display_name: Quest / Isaac Teleop PC
+    roles:
+      - isaac_teleop
+      - cloudxr_server
+    note: >
+      多くのラボでは gpu と同一筐体。別マシンなら下の network を埋め、
+      CloudXR 用ポートを開ける。LeLab / Web Remote 稼働中に Pi のシリアルを奪わない。
+    # --- gpu と別マシンのときだけ記入。同じなら null のまま gpu を使う ---
+    network:
+      lan_ip: null
+      tailscale_ip: null
+      ssh: null
+    repos:
+      - ~/robot/so101-lab
+      - ~/robot/IsaacTeleop
+    docs:
+      - docs/08_quest_isaacteleop.md
+      - docs/11_quest_teleop_runbook.md
+
+  quest3:
+    display_name: Meta Quest 3
+    roles:
+      - xr_teleop_client
+    note: git clone 不要。ブラウザの CloudXR クライアントから quest_pc（または gpu）の IP へ。
+    docs:
+      - docs/08_quest_isaacteleop.md
+
+  camera_xiao:
+    display_name: Xiao / ESP32 MJPEG camera
+    roles:
+      - mjpeg_stream
+    note: 汎用 SSH ホストではない。ストリーム URL のみ。
+    # --- ラボごとに記入 ---
+    network:
+      lan_ip: ${SO101_CAMERA_XIAO_IP}
+      stream_url: ${SO101_CAMERA_XIAO_URL}
+    services:
+      - name: mjpeg
+        port: 81
+        path: /stream
+    docs:
+      - docs/05_cameras.md
+
+agent:
+  before_ssh_or_rsync:
+    - configs/lab_hosts.yaml を読む（無ければ .example からコピーするよう案内）。
+    - hosts.<id>.network.ssh を使う。Tailscale IP があれば優先。
+    - 疎通: ssh -o BatchMode=yes <ssh> 'hostname; echo ok'
+  before_train:
+    - this_host（または明示ターゲット）が gpu（退避なら thor）であることを確認。
+    - 学習ホストに meta/info.json 付きデータセットがあること。
+  before_real_robot:
+    - exclusivity_forbidden の組み合わせが同時に動いていないこと。
+    - トルク ON・本番テレオペはユーザーの明示承認後のみ。
+  do_not:
+    - configs/lab_hosts.yaml や dataset.local.env をコミットしない
+    - IP を推測で埋めない。変わったら lab_hosts.yaml を直す
+    - Pi で本格 ACT / VLA 学習をしない

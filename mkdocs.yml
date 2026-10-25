@@ -1,0 +1,139 @@
+# MkDocs — docs/learn と運用マニュアルをブラウザ / スマホで読む
+# Serve:  make docs-serve  →  http://<PC-IP>:8100
+site_name: so101-lab ドキュメント
+site_description: SO-101 ラボ運用と実機 IL 学習カリキュラム（ACT → SmolVLA → 双腕）
+
+strict: true
+
+validation:
+  nav:
+    omitted_files: ignore
+  links:
+    # リポ外（sim2rl / configs / scripts）への相対リンクはサイト外参照として許容
+    not_found: ignore
+    absolute_links: ignore
+    unrecognized_links: ignore
+
+theme:
+  name: material
+  language: ja
+  font: false
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: ライトモードに切り替え
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: ダークモードに切り替え
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search
+  # 全ページ連結の1枚HTML（site/print.html）→ make docs-print で print/ へ書き出し。
+  # スマホ/Drive に置けばサーバー無し・圏外でも読める
+  - print-site:
+      add_to_navigation: false
+
+nav:
+  - ホーム: index.md
+  - 学習カリキュラム:
+      - 概要と進め方: learn/README.md
+      - 第0章 ラボ地図:
+          - 章のトップ: learn/00_lab_map/README.md
+          - L0 ゼロから Lab を立てる: learn/00_lab_map/00_setup_from_zero.md
+      - 第1章 概念:
+          - 章のトップ: learn/01_concepts/README.md
+          - L1 IL vs RL: learn/01_concepts/01_il_vs_rl.md
+          - L2 ACT vs VLA: learn/01_concepts/02_act_vs_vla.md
+          - L3 強化学習の手順: learn/01_concepts/03_rl_procedure.md
+      - 論文索引: learn/papers.md
+      - 第2章 片腕 ACT:
+          - 章のトップ: learn/02_single_arm_act/README.md
+          - L1 テレオペと録画: learn/02_single_arm_act/01_teleop_record.md
+          - L2 学習と推論: learn/02_single_arm_act/02_train_eval.md
+      - 第3章 SmolVLA:
+          - 章のトップ: learn/03_smolvla/README.md
+          - L1 ファインチューン: learn/03_smolvla/01_finetune.md
+          - L2 言語と音声: learn/03_smolvla/02_language_voice.md
+      - 第4章 その他 VLA:
+          - 章のトップ: learn/04_other_vla/README.md
+          - L1 新しいVLAを載せるチェックリスト: learn/04_other_vla/01_onboarding_checklist.md
+      - 第5章 双腕への道: learn/05_bimanual/README.md
+      - 第6章 力覚観測IL:
+          - 章のトップ: learn/06_force_obs/README.md
+          - L1 Present_Loadを観測へ混ぜる: learn/06_force_obs/01_present_load.md
+  - 運用マニュアル:
+      - 索引: manual.md
+      - リポジトリ関係: 00_repos.md
+      - 全体概要: 01_overview.md
+      - LeLab: 02_lelab.md
+      - Web Remote: 03_web_remote.md
+      - キャリブレーション: 04_calibration.md
+      - カメラ: 05_cameras.md
+      - トラブルシュート: 06_troubleshooting.md
+      - マルチホスト: 07_multi_host.md
+      - Quest / Isaac Teleop: 08_quest_isaacteleop.md
+      - ブリッジ契約: 09_bridge_contract.md
+      - MolmoAct2（Thor）: 10_molmoact2_thor.md
+      - Quest テレオペ runbook: 11_quest_teleop_runbook.md
+      - MuJoCo sim: 12_mujoco_sim.md
+      - drive_profile / 12V: 13_drive_profiles.md
+      - 片腕 IL 運用正本: 14_single_arm_il.md
+      - データセット作成・閲覧・編集: 15_dataset_pipeline.md
+      - ローカル MLflow: 16_local_mlflow.md
+      - 片腕 ACT（学習と Thor 推論）: 17_act_record_train_infer.md
+      - RL ポリシー実機評価（real_eval）: 18_real_eval.md
+      - VRAM 目安（Diffusion / VLA）: 19_vram_guide.md
+      - TurboVLA: 20_turbovla.md
+      - 片腕 pi05（学習と Thor 推論）: 21_pi05_thor.md
+      - Newton Kamino sim（GPU）: 22_kamino_sim.md
+      - PC 間データ転送: 23_data_transfer.md
+      - Pi4 モデル転送と推論の前提: 23_pi4_model_transfer.md
+      - 学習済みモデル実機評価・選別: 24_model_eval_campaign.md
+      - データセット/モデル配布（HF Hub）: 25_dataset_model_release.md
+      - ロードマップ: roadmap.md
+  - チェックリスト:
+      - 使い方: checklists/README.md
+      - 片腕 IL: checklists/single_arm_il.checklist.md
+      - モデル評価・選別: checklists/model_eval.checklist.md
+      - Quest テレオペ: checklists/quest_teleop.checklist.md
+  - 提出・レポート:
+      - 索引: reports/README.md
+      - Agent 運用: reports/AGENT.md
+      - TODO: reports/TODO.md
+      - 工夫 / 失敗: reports/design_notes.md
+      - 参考文献: reports/references.md
+      - sim2rl 作業レポート: reports/sim2rl_work_report.md
+      - 片腕 IL 作業レポート: reports/single_arm_il_work_report.md
+      - 学習・推論ラン台帳: reports/run_registry.md
+      - データセット台帳: reports/dataset_registry.md
+      - 実機評価・選別結果: reports/model_eval_results.md

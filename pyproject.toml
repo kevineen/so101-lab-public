@@ -1,0 +1,30 @@
+# Docs tooling for so101-lab (Material for MkDocs).
+# Usage:  uv sync --all-groups && make docs-serve
+#         make mlflow-serve   # Docker. Fallback: SO101_MLFLOW_BACKEND=uv
+[project]
+name = "so101-lab"
+version = "0.0.0"
+description = "SO-101 lab ops + learn docs (MkDocs site)"
+requires-python = ">=3.12"
+dependencies = [
+    "lerobot[dataset-viz]>=0.6.1",
+]
+
+[dependency-groups]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocs-print-site-plugin>=2.9",
+]
+tracking = [
+    "mlflow>=2.19,<4",
+]
+sim = [
+    # Newton（Kamino ソルバ同梱）— GPU 物理シミュ。使い方は docs/22_kamino_sim.md
+    # trimesh: MJCF/STL メッシュ取り込み用（newton[importers] は open3d/usd-core まで入るため最小のみ）
+    "newton>=1.7.0",
+    "trimesh>=4.6",
+    "scipy>=1.11",
+]
+
+[tool.uv]
+package = false

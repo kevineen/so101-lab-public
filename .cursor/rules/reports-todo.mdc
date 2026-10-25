@@ -1,0 +1,37 @@
+---
+description: >-
+  提出用レポート・TODO・工夫/失敗・参考文献ライセンス。ユーザーがレポート / TODO /
+  提出 / sim2rl 作業報告に触れたとき、または docs/reports/** を編集するときに適用。
+globs: docs/reports/**
+alwaysApply: true
+---
+
+# reports / TODO
+
+手順の正本はここに書かず、次を読む:
+
+- `docs/reports/AGENT.md` — ワークフロー・禁止・**§9 引用/ライセンス必須**
+- `docs/reports/TODO.md` — 残リスト（P0 から 1 件ずつ）
+- `docs/reports/design_notes.md` — 工夫（D-）/ 失敗（F-）
+- `docs/reports/references.md` — 参考リンク + ライセンス（ID 正本）
+- `docs/reports/sim2rl_work_report.md` — 提出用本文
+
+## 必須動作
+
+1. レポート / TODO / 提出の話では、先に `AGENT.md` と `TODO.md` を読む
+2. TODO は **1 件だけ**進め、evidence → レポート → **references** → **design_notes** → `done`
+3. 外部の論文・コード・資産・SDK を名前で出したら `references.md` に **url と license** を登録（空欄禁止）
+4. うまくいかなかった試行は握りつぶさず `design_notes.md` の `F-` に残す（`refs` 必須）
+5. 数値の一次情報は `~/robot/sim2rl` の `benchmarks/` / `runs/` / `docs/`
+6. 長時間 GPU・実機トルク ON・git commit/push はユーザー確認後のみ
+
+## 完了報告の型
+
+```
+完了: T-P0-0x — <タイトル>
+evidence: <path>
+report: sim2rl_work_report v0.x §…
+design_notes: D-… / F-…（なければ「判断変更なし」）
+references: R-…（なければ「追加なし」）
+TODO: open P0 残り N 件。次候補: T-…
+```

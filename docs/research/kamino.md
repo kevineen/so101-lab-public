@@ -1,0 +1,1 @@
+https://github.com/newton-physics/newton/tree/main/newton/_src/solvers/kamino

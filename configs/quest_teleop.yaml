@@ -1,0 +1,96 @@
+# Quest 3 live teleop (main PC) — input map, motion scale, cameras.
+# Used by: bridges.isaacteleop_to_so101.live_quest / scripts/start_quest_bridge_live.sh
+# Pi relative EE also reads this via: start_bridge_receiver.sh --teleop-config ...
+#
+# Clutch / gripper axes are ControllerInputIndex names (lowercase):
+#   primary_click | secondary_click | squeeze_value | trigger_value
+#   thumbstick_x | thumbstick_y | thumbstick_click | menu_click
+# Quest Touch: A/X = primary_click, B/Y = secondary_click
+
+arms: [left, right]
+
+# Controller side → physical SO-101 port (swap to invert left/right hands)
+# right controller → follower, left controller → leader
+arm_resolve:
+  left: leader
+  right: follower
+  single: follower
+
+controls:
+  clutch: primary_click
+  clutch_threshold: 0.5
+  gripper: trigger_value
+  gripper_deadzone: 0.05
+  # Invert gripper axis if needed (e.g. thumbstick up = open)
+  gripper_invert: false
+
+motion:
+  # approx = PC scales pose, Pi ApproxIk heuristics
+  # relative_ee = PC sends raw pose, Pi FK tip0 + axis_map(Δ) + placo IK
+  mode: relative_ee
+  pos_scale: 1.0
+  max_step_deg: 3.0
+  # robot_axis: quest_axis (±x|y|z).
+  # 症状「奥→下 / 手前→上」= Quest の深さ軸が robot z に乗っていたため入替。
+  # まだ逆なら該当だけ変える: x: z / z: -y など。
+  axis_map:
+    x: -z   # 奥・手前 → アーム前後
+    y: x    # 左右
+    z: y    # 上下
+  # Used only when mode: approx (Pi --ik approx)
+  m_to_deg:
+    x: 120.0
+    y: 140.0
+    z: 160.0
+
+home:
+  use_hello_joints: true
+  joint_offsets_deg:
+    left: {}
+    right: {}
+
+# Software soft limits (motor / calib 範囲より内側). Pi receiver が適用。
+# 机・胴体・双腕の交差を減らしやすい。完全な衝突回避ではない。
+safety:
+  enabled: true
+  # 物理アーム名 follower|leader、または全腕共通 "*" / フラット表記
+  # nest が箱の外だとクラッチで引き込まれる → nest が入る幅にする
+  soft_joint_limits_deg:
+    "*":
+      shoulder_pan: [-70.0, 70.0]
+      shoulder_lift: [-50.0, 90.0]
+      elbow_flex: [-100.0, 90.0]
+      wrist_flex: [-80.0, 80.0]
+      wrist_roll: [-110.0, 110.0]
+    # 左右で分ける例:
+    # follower:
+    #   shoulder_pan: [-40.0, 20.0]   # 内側に入りすぎない
+    # leader:
+    #   shoulder_pan: [-20.0, 40.0]
+  # 先端 XYZ（URDF ベース m）。実機 FK で測って調整。
+  # RelativeEeIk は tip0（クラッチ時 FK）を箱に含めてクランプするので、
+  # nest がわずかに外でも奥行きが死んだり下へ引き込まれたりしない。
+  tip_bounds_m:
+    "*":
+      x: [-0.05, 0.40]
+      y: [-0.30, 0.30]
+      z: [0.00, 0.45]
+
+cameras:
+  enabled: true
+  # Pi の Web Remote URL。空なら SO101_PI_BASE_URL (configs/lab.local.env)、
+  # それも無ければ http://127.0.0.1:8765 にフォールバックする
+  pi_base_url: ""
+  # Names must match Pi /api/stream/<name>. Logical center is always "center"
+  # (switch Xiao/D435 via so101_dual_cam.yaml center_source or CENTER_SOURCE).
+  streams:
+    - name: center
+      enabled: true
+    - name: wrist_follower
+      enabled: true
+    - name: wrist_leader
+      enabled: true
+  placements:
+    center: { distance_m: 1.6, yaw_deg: 0.0, pitch_deg: -8.0, x_m: 0.0 }
+    wrist_follower: { distance_m: 1.2, yaw_deg: -28.0, pitch_deg: -5.0, x_m: -0.35 }
+    wrist_leader: { distance_m: 1.2, yaw_deg: 28.0, pitch_deg: -5.0, x_m: 0.35 }

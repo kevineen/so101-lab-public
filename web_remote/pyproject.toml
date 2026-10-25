@@ -1,0 +1,22 @@
+[project]
+name = "web-remote"
+version = "0.1.0"
+description = "Browser joint teleop + camera MJPEG for SO-101 follower"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "opencv-python-headless>=4.8.0",
+  "numpy>=1.24.0",
+  "pyyaml>=6.0",
+]
+
+[project.scripts]
+web-remote = "web_remote.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["web_remote"]

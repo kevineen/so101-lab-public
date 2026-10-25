@@ -1,0 +1,8 @@
+# Local MLflow for lerobot-train (see docs/16_local_mlflow.md).
+# The store directory holds the sqlite DB and artifacts. It is gitignored.
+# Override any key with SO101_MLFLOW_HOST / PORT / STORE / EXPERIMENT.
+
+host: 0.0.0.0
+port: 5000
+store_dir: mlflow_store
+experiment: so101

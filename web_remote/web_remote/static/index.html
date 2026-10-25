@@ -1,0 +1,2240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SO-101 Web Remote</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a222c;
+      --text: #e7eef6;
+      --muted: #8b9aab;
+      --accent: #3d9a6a;
+      --danger: #c44b4b;
+      --border: #2a3542;
+      --warn: #c9a227;
+      --cam-scale: 0.5;
+      --layout-max: 1400px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1c2a22 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 20, 25, 0.85);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      letter-spacing: 0.02em;
+      font-weight: 600;
+    }
+    .status {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .dot {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 50%;
+      background: var(--muted);
+      display: inline-block;
+    }
+    .dot.ok { background: var(--accent); }
+    .dot.bad { background: var(--danger); }
+    .dot.warn { background: var(--warn); }
+    main.layout {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1rem 1.25rem 2rem;
+      max-width: var(--layout-max);
+      margin: 0 auto;
+    }
+    /* Desktop: Joints | Stick | Input (3 cols). Actions = next full-width row. */
+    .control-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.7fr) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+    .panel-actions {
+      width: 100%;
+    }
+    .panel-cams-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+    .panel-cams-head h2 { margin: 0; }
+    .cam-scale-tabs, .action-cat h3 {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .cam-scale-tabs button {
+      background: #12181f;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.3rem 0.65rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .cam-scale-tabs button.active {
+      background: var(--accent);
+      color: #06140c;
+      border-color: transparent;
+    }
+    .action-cats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .action-cat {
+      background: #12181f;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+    }
+    .action-cat h3 {
+      margin: 0 0 0.55rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .action-cat .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+    }
+    .action-cat .btn-grid.one-col {
+      grid-template-columns: 1fr;
+    }
+    .action-cat .btn-grid > button {
+      width: 100%;
+    }
+    .panel-stick .pad-wrap {
+      flex-direction: column;
+      align-items: center;
+      margin-top: 0;
+    }
+    .panel-stick .pad-meta {
+      text-align: center;
+      max-width: none;
+    }
+    /* Tablet: left stack (Joints + Stick) | Input ; Actions full width below */
+    @media (max-width: 1100px) {
+      .control-grid {
+        grid-template-columns: 1.15fr 1fr;
+      }
+      .panel-joints { grid-column: 1; grid-row: 1; }
+      .panel-stick { grid-column: 1; grid-row: 2; }
+      .panel-input { grid-column: 2; grid-row: 1 / span 2; }
+      .action-cats { grid-template-columns: 1fr 1fr; }
+    }
+    /* Phone: single column — Joints → Stick → Input → Actions */
+    @media (max-width: 720px) {
+      .control-grid { grid-template-columns: 1fr; }
+      .panel-joints, .panel-stick, .panel-input {
+        grid-column: auto;
+        grid-row: auto;
+      }
+      .action-cats { grid-template-columns: 1fr; }
+      .action-cat .btn-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .panel h2 {
+      margin: 0 0 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .arm-tabs, .mode-tabs, .teleop-arm-btns, .control-mode-tabs {
+      display: flex;
+      gap: 0.4rem;
+      margin-bottom: 0.85rem;
+      flex-wrap: wrap;
+    }
+    .arm-tabs button, .mode-tabs button, .teleop-arm-btns button, .control-mode-tabs button {
+      background: #12181f;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.45rem 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .arm-tabs button.active, .mode-tabs button.active, .control-mode-tabs button.active {
+      background: var(--accent);
+      color: #06140c;
+      border-color: transparent;
+    }
+    .teleop-arm-btns button.active {
+      background: var(--accent);
+      color: #06140c;
+      border-color: transparent;
+    }
+    .teleop-arm-btns button.soft {
+      border-color: var(--warn);
+      color: var(--warn);
+    }
+    .cams {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      width: calc(100% * var(--cam-scale));
+      max-width: 100%;
+      margin-inline: auto;
+      transition: width 0.15s ease;
+    }
+    @media (max-width: 640px) {
+      .cams {
+        grid-template-columns: 1fr;
+        width: 100%;
+      }
+    }
+    .cam img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: #000;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .cam label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    .joint {
+      display: grid;
+      grid-template-columns: 7.5rem 1fr 3.5rem;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.65rem;
+      padding: 0.2rem 0.35rem;
+      border-radius: 6px;
+    }
+    .joint.selected {
+      background: rgba(61, 154, 106, 0.15);
+      outline: 1px solid rgba(61, 154, 106, 0.45);
+    }
+    .joint label { font-size: 0.85rem; }
+    .joint input[type="range"] { width: 100%; }
+    .joint .val {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      text-align: right;
+      color: var(--muted);
+    }
+    .pad-wrap {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .pad {
+      width: 160px;
+      height: 160px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #12181f;
+      position: relative;
+      touch-action: none;
+      user-select: none;
+    }
+    .pad .knob {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0.9;
+    }
+    .pad-meta { font-size: 0.8rem; color: var(--muted); max-width: 12rem; }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    button.estop, button.secondary, button.bind-btn {
+      border: 0;
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button.estop {
+      background: var(--danger);
+      color: white;
+      min-width: 8rem;
+    }
+    button.resume {
+      background: var(--accent);
+      color: #06140c;
+      min-width: 8rem;
+      border: 0;
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    button.resume:disabled { opacity: 0.5; cursor: not-allowed; }
+    .estop-banner {
+      display: none;
+      margin-top: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--danger);
+      background: rgba(220, 70, 70, 0.12);
+      color: var(--danger);
+      font-weight: 600;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .estop-banner.visible { display: flex; }
+    button.secondary, button.bind-btn {
+      background: #2a3542;
+      color: var(--text);
+    }
+    button.bind-btn {
+      min-width: 6.5rem;
+      font-family: ui-monospace, "Cascadia Code", monospace;
+      font-size: 0.82rem;
+      padding: 0.4rem 0.6rem;
+    }
+    button.bind-btn.listening {
+      outline: 2px solid var(--warn);
+      color: var(--warn);
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .hint {
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .param-grid {
+      display: grid;
+      gap: 0.65rem;
+      margin-bottom: 0.75rem;
+    }
+    .param {
+      display: grid;
+      grid-template-columns: 8.5rem 1fr 3.2rem;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .param label { font-size: 0.85rem; color: var(--muted); }
+    .param .val {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      text-align: right;
+      color: var(--muted);
+    }
+    .map-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+    .map-table th, .map-table td {
+      border-top: 1px solid var(--border);
+      padding: 0.4rem 0.25rem;
+      text-align: left;
+      vertical-align: middle;
+    }
+    .map-table th { color: var(--text); font-weight: 600; }
+    #padName, #inputModeLabel { color: var(--text); }
+    #selectedJointLabel { color: var(--accent); font-weight: 600; }
+    .mode-panels > .mode-panel { display: none; }
+    .mode-panels > .mode-panel.active { display: block; }
+    .kbd-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+    .calib-banner {
+      display: none;
+      background: rgba(201, 162, 39, 0.15);
+      border: 1px solid var(--warn);
+      color: var(--warn);
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+    }
+    .calib-banner.active { display: block; }
+    .calib-table input[type="number"] {
+      width: 5.5rem;
+      background: #12181f;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 0.25rem 0.35rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .calib-table .raw {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+    }
+    .calib-controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 0.75rem 0;
+    }
+    .motor-checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 0.85rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .calib-drive {
+      display: none;
+      margin: 0.75rem 0;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #12181f;
+    }
+    .calib-drive.active { display: block; }
+    .calib-drive-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 0.75rem;
+      align-items: center;
+      margin-bottom: 0.55rem;
+    }
+    .calib-drive-row:last-child { margin-bottom: 0; }
+    .calib-drive label.inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+    .step-tabs {
+      display: inline-flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .step-tabs button {
+      background: #1a222c;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 0.25rem 0.55rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .step-tabs button.active {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(61, 154, 106, 0.15);
+    }
+    .jog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.45rem;
+    }
+    .jog-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.35rem;
+      padding: 0.35rem 0.45rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+    .jog-item span.name { color: var(--muted); min-width: 5.5rem; }
+    .jog-btns { display: inline-flex; gap: 0.25rem; }
+    .jog-btns button {
+      min-width: 2.2rem;
+      background: #1a222c;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 0.3rem 0.45rem;
+      cursor: pointer;
+      user-select: none;
+      touch-action: none;
+    }
+    .jog-btns button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .jog-btns button:not(:disabled):active {
+      border-color: var(--accent);
+      background: rgba(61, 154, 106, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SO-101 Web Remote</h1>
+    <div class="status">
+      <span><span id="connDot" class="dot"></span> <span id="connLabel">connecting…</span></span>
+      <span><span id="inputDot" class="dot"></span> <span id="inputModeLabel">input: off</span></span>
+      <span id="teleopLabel"></span>
+      <span id="estopLabel"></span>
+      <span id="calibLabel"></span>
+      <span id="rateLabel"></span>
+    </div>
+  </header>
+  <main class="layout">
+    <section class="panel panel-cams">
+      <div class="panel-cams-head">
+        <h2>Cameras</h2>
+        <div id="camScaleTabs" class="cam-scale-tabs" role="group" aria-label="カメラ表示倍率">
+          <button type="button" data-scale="0.5">0.5×</button>
+          <button type="button" data-scale="0.75">0.75×</button>
+          <button type="button" data-scale="1">1×</button>
+          <button type="button" data-scale="1.25">1.25×</button>
+        </div>
+      </div>
+      <div id="cams" class="cams"></div>
+    </section>
+
+    <div class="control-grid">
+      <section class="panel panel-joints">
+        <h2>Arms / Joints</h2>
+        <div id="armTabs" class="arm-tabs"></div>
+        <div id="joints"></div>
+      </section>
+
+      <section class="panel panel-stick">
+        <h2>Virtual stick</h2>
+        <div class="pad-wrap">
+          <div id="stick" class="pad"><div class="knob" id="knob"></div></div>
+          <div class="pad-meta">shoulder_pan / shoulder_lift。離すと保持。</div>
+        </div>
+      </section>
+
+      <section class="panel panel-input">
+        <h2>Input mode</h2>
+        <div id="modeTabs" class="mode-tabs">
+          <button type="button" data-mode="off">オフ</button>
+          <button type="button" data-mode="gamepad">ゲームパッド</button>
+          <button type="button" data-mode="keyboard">キーボード</button>
+        </div>
+        <p class="hint">
+          選択関節: <span id="selectedJointLabel">—</span>
+          <span id="padNameWrap"> / パッド: <span id="padName">—</span></span>
+        </p>
+
+        <div class="param-grid">
+          <div class="param">
+            <label for="p-maxdeg">最大°/送信</label>
+            <input id="p-maxdeg" type="range" min="0.5" max="15" step="0.1" value="5" />
+            <span class="val" id="v-maxdeg">5.0</span>
+          </div>
+          <div class="param">
+            <label for="p-grip">グリッパ速度</label>
+            <input id="p-grip" type="range" min="0.5" max="25" step="0.5" value="8" />
+            <span class="val" id="v-grip">8.0</span>
+          </div>
+          <div class="param">
+            <label for="p-interval">送信間隔 ms</label>
+            <input id="p-interval" type="range" min="20" max="150" step="5" value="25" />
+            <span class="val" id="v-interval">25</span>
+          </div>
+          <div class="param" id="deadzoneRow">
+            <label for="p-deadzone">デッドゾーン</label>
+            <input id="p-deadzone" type="range" min="0.05" max="0.45" step="0.01" value="0.18" />
+            <span class="val" id="v-deadzone">0.18</span>
+          </div>
+        </div>
+
+        <div class="mode-panels">
+          <div class="mode-panel" id="panel-off">
+            <p class="hint">スライダーと仮想スティックのみ。パッド／キーボード入力は無視されます。</p>
+          </div>
+
+          <div class="mode-panel" id="panel-gamepad">
+            <table class="map-table">
+              <thead><tr><th>入力</th><th>動作</th></tr></thead>
+              <tbody>
+                <tr><td>左スティック Y</td><td>選択関節を比例ジョグ</td></tr>
+                <tr><td>右スティック Y</td><td>グリッパ比例ジョグ</td></tr>
+                <tr><td>十字 ← / →</td><td>関節選択</td></tr>
+                <tr><td>LB / RB</td><td>アーム切替</td></tr>
+                <tr><td>A</td><td>グリッパ全開⇔全閉</td></tr>
+                <tr><td>Y</td><td>初期位置へ戻る</td></tr>
+                <tr><td>Back + B</td><td>ESTOP</td></tr>
+              </tbody>
+            </table>
+            <p class="hint">コントローラーはブラウザを開いている PC にペアリングし、任意ボタンを一度押して認識させてください。</p>
+          </div>
+
+          <div class="mode-panel" id="panel-keyboard">
+            <p class="hint">キー割当てボタンを押し、続けて割り当てたいキーを押します。Esc でキャンセル、Backspace で未割当。</p>
+            <table class="map-table" id="keybindTable">
+              <thead><tr><th>動作</th><th>キー</th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <div class="kbd-actions">
+              <button class="secondary" id="resetKeysBtn" type="button">既定に戻す</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel panel-actions">
+      <h2>Teleop / Actions</h2>
+      <div id="controlModeTabs" class="control-mode-tabs" role="group" aria-label="制御モード">
+        <button type="button" data-mode="browser" class="active">Browser</button>
+        <button type="button" data-mode="leader_follow" id="leaderFollowModeBtn">Leader follow</button>
+      </div>
+      <p class="hint" style="margin-top:0" id="controlModeHint">
+        Browser: スライダーで腕を駆動（同時トルクONは1腕）。Leader follow: 物理 leader を手で動かし follower が追従。
+      </p>
+      <div class="action-cats">
+        <div class="action-cat">
+          <h3>Teleop</h3>
+          <div id="teleopArmBtns" class="teleop-arm-btns"></div>
+          <div class="btn-grid one-col">
+            <button class="secondary" id="teleopBtn" type="button">全腕テレオペ OFF</button>
+            <button class="secondary" id="followResumeBtn" type="button" hidden>追従 ON</button>
+          </div>
+        </div>
+        <div class="action-cat">
+          <h3>Home / Nest</h3>
+          <div class="btn-grid">
+            <button class="secondary" id="saveHomeBtn" type="button">選択腕を保存</button>
+            <button class="secondary" id="saveHomeBothBtn" type="button">両腕を保存</button>
+            <button class="secondary" id="goHomeBtn" type="button">選択腕へ戻る</button>
+            <button class="secondary" id="goHomeBothBtn" type="button">両腕へ戻る</button>
+          </div>
+        </div>
+        <div class="action-cat">
+          <h3>Safety</h3>
+          <div class="btn-grid">
+            <button class="estop" id="estopBtn" type="button">ESTOP</button>
+            <button class="resume" id="clearBtn" type="button" hidden>再開</button>
+            <button class="secondary" id="releaseBtn" type="button">Release</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint" id="homeHint">初期位置未保存 — タブで腕を選び安全姿勢にして「選択腕を保存」。片腕ずつ可。保存先: ~/.cache/so101-lab/home_poses.json</p>
+      <div id="estopBanner" class="estop-banner" role="status">
+        <span>ESTOP 中 — 両腕トルク OFF。再開後、テレオペ ON で操作できます。</span>
+        <button class="resume" id="clearBtnBanner" type="button">再開</button>
+      </div>
+      <p class="hint">
+        テレオペ ON は<strong>そのアームだけ</strong>トルク ON（もう一方は力を抜きます）。OFF / ESTOP = 両腕トルク OFF。
+        ESTOP 後は<strong>再開</strong>→腕ボタンでテレオペ ON。LeLab と同時起動しないでください。
+      </p>
+    </section>
+
+    <section class="panel panel-calib">
+      <h2>Calibration（モーター範囲）</h2>
+      <div id="calibBanner" class="calib-banner">
+        キャリブモード中: 初期はトルク OFF（手で可）。手で動かしにくいときは「ブラウザ駆動」を ON にしてジョグしながら min/max を取ってください。
+      </div>
+      <p class="hint">
+        対象アームは上のタブ（follower / leader）。グリッパーの開閉端を直すなら
+        <strong>gripper</strong> にチェック → キャリブ開始 → 手またはブラウザ駆動で閉じ／開き →
+        「現在を min」「現在を max」→ 保存。
+      </p>
+      <div class="motor-checks" id="calibMotorChecks"></div>
+      <div class="calib-controls">
+        <button class="secondary" id="calibEnterBtn" type="button">キャリブ開始（トルクOFF）</button>
+        <button class="secondary" id="calibDriveBtn" type="button" disabled>ブラウザ駆動 ON</button>
+        <button class="secondary" id="calibMidBtn" type="button" disabled>中点を設定</button>
+        <button class="secondary" id="calibCapMinBtn" type="button" disabled>現在を min</button>
+        <button class="secondary" id="calibCapMaxBtn" type="button" disabled>現在を max</button>
+        <button class="secondary" id="calibRangeStartBtn" type="button" disabled>範囲記録スタート</button>
+        <button class="secondary" id="calibRangeStopBtn" type="button" disabled>範囲記録ストップ</button>
+        <button class="estop" id="calibSaveBtn" type="button" disabled style="flex:0;background:var(--accent);color:#06140c">保存して終了</button>
+        <button class="secondary" id="calibCancelBtn" type="button" disabled>キャンセル</button>
+      </div>
+      <div id="calibDrivePanel" class="calib-drive">
+        <div class="calib-drive-row">
+          <strong style="font-size:0.9rem">ブラウザ駆動ジョグ</strong>
+          <span class="hint" style="margin:0">チェックしたモータを ± で動かします（押しっぱなしで連続）。位置リミットは一時的に全開です。</span>
+        </div>
+        <div class="calib-drive-row">
+          <span class="hint" style="margin:0">ステップ (raw):</span>
+          <div class="step-tabs" id="calibStepTabs">
+            <button type="button" data-step="5">5</button>
+            <button type="button" data-step="20">20</button>
+            <button type="button" data-step="50" class="active">50</button>
+            <button type="button" data-step="100">100</button>
+            <button type="button" data-step="200">200</button>
+          </div>
+        </div>
+        <div class="jog-grid" id="calibJogGrid"></div>
+      </div>
+      <p class="hint" id="calibStatus">未開始</p>
+      <table class="map-table calib-table">
+        <thead>
+          <tr>
+            <th>モーター</th>
+            <th>現在 raw</th>
+            <th>homing</th>
+            <th>range_min</th>
+            <th>range_max</th>
+          </tr>
+        </thead>
+        <tbody id="calibTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const TOKEN_KEY = "so101_web_remote_token";
+    const PARAM_KEY = "so101_web_remote_input_params";
+    const KEYS_KEY = "so101_web_remote_keybinds";
+    const CAM_SCALE_KEY = "so101_web_remote_cam_scale";
+    const CAM_SCALES = [0.5, 0.75, 1, 1.25];
+
+    /** @type {Record<string, {label: string, code: string}>} */
+    const DEFAULT_KEYBINDS = {
+      jogPlus: { label: "選択関節 +", code: "ArrowUp" },
+      jogMinus: { label: "選択関節 -", code: "ArrowDown" },
+      gripPlus: { label: "グリッパ開", code: "KeyE" },
+      gripMinus: { label: "グリッパ閉", code: "KeyQ" },
+      jointPrev: { label: "前の関節", code: "ArrowLeft" },
+      jointNext: { label: "次の関節", code: "ArrowRight" },
+      armPrev: { label: "前のアーム", code: "Comma" },
+      armNext: { label: "次のアーム", code: "Period" },
+      gripToggle: { label: "グリッパ開閉トグル", code: "KeyG" },
+      home: { label: "初期位置へ戻る", code: "KeyH" },
+      estop: { label: "ESTOP", code: "Space" },
+    };
+
+    let token = localStorage.getItem(TOKEN_KEY);
+    let limits = {};
+    let jointNames = [];
+    let arms = ["follower"];
+    let activeArm = "follower";
+    let targets = {};
+    let sending = false;
+    let selectedJointIdx = 0;
+    let prevButtons = {};
+    let lastInputApplyMs = 0;
+    let listeningAction = null;
+    const keysDown = new Set();
+    const keyEdgeArmed = new Set();
+    let teleopEnabled = true;
+    /** @type {string | null} */
+    let teleopArm = null;
+    /** @type {"browser" | "leader_follow"} */
+    let controlMode = "browser";
+    let handTeleopAvailable = true;
+    let calibMode = false;
+    let calibDrive = false;
+    let calibPollTimer = null;
+    /** @type {Record<string, {id:number,drive_mode:number,homing_offset:number,range_min:number,range_max:number}>} */
+    let calibDraft = {};
+    let calibRaw = {};
+    let calibRecording = [];
+    let calibJogStep = 50;
+    /** @type {ReturnType<typeof setInterval> | null} */
+    let calibJogHoldTimer = null;
+    let calibJogBusy = false;
+
+    const params = {
+      mode: "off", // off | gamepad | keyboard
+      deadzone: 0.18,
+      maxDeg: 5.0,
+      gripSpeed: 8.0,
+      intervalMs: 25,
+    };
+    let camScale = 0.5;
+
+    /** @type {Record<string, {label: string, code: string}>} */
+    let keybinds = structuredClone(DEFAULT_KEYBINDS);
+
+    function loadParams() {
+      try {
+        const raw = localStorage.getItem(PARAM_KEY);
+        if (!raw) {
+          // migrate old pad-only params
+          const old = localStorage.getItem("so101_web_remote_pad_params");
+          if (old) {
+            const saved = JSON.parse(old);
+            Object.assign(params, saved);
+            if (saved.enabled) params.mode = "gamepad";
+          }
+          return;
+        }
+        Object.assign(params, JSON.parse(raw));
+        if (!["off", "gamepad", "keyboard"].includes(params.mode)) params.mode = "off";
+      } catch (_) { /* ignore */ }
+    }
+
+    function saveParams() {
+      localStorage.setItem(PARAM_KEY, JSON.stringify(params));
+    }
+
+    function loadCamScale() {
+      try {
+        const raw = localStorage.getItem(CAM_SCALE_KEY);
+        if (raw == null) return;
+        const n = Number(raw);
+        if (CAM_SCALES.includes(n)) camScale = n;
+      } catch (_) { /* ignore */ }
+    }
+
+    function applyCamScale(scale) {
+      const n = Number(scale);
+      camScale = CAM_SCALES.includes(n) ? n : 0.5;
+      document.documentElement.style.setProperty("--cam-scale", String(camScale));
+      localStorage.setItem(CAM_SCALE_KEY, String(camScale));
+      document.querySelectorAll("#camScaleTabs button").forEach((btn) => {
+        btn.classList.toggle("active", Number(btn.dataset.scale) === camScale);
+      });
+    }
+
+    function loadKeybinds() {
+      try {
+        const raw = localStorage.getItem(KEYS_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        Object.keys(DEFAULT_KEYBINDS).forEach((action) => {
+          if (saved[action] && typeof saved[action].code === "string") {
+            keybinds[action] = {
+              label: DEFAULT_KEYBINDS[action].label,
+              code: saved[action].code,
+            };
+          }
+        });
+      } catch (_) { /* ignore */ }
+    }
+
+    function saveKeybinds() {
+      const payload = {};
+      Object.keys(keybinds).forEach((k) => {
+        payload[k] = { code: keybinds[k].code };
+      });
+      localStorage.setItem(KEYS_KEY, JSON.stringify(payload));
+    }
+
+    function codeLabel(code) {
+      if (!code) return "（未割当）";
+      if (code.startsWith("Key")) return code.slice(3);
+      if (code.startsWith("Digit")) return code.slice(5);
+      const map = {
+        ArrowUp: "↑",
+        ArrowDown: "↓",
+        ArrowLeft: "←",
+        ArrowRight: "→",
+        Space: "Space",
+        Comma: ",",
+        Period: ".",
+        Slash: "/",
+        Semicolon: ";",
+        Quote: "'",
+        BracketLeft: "[",
+        BracketRight: "]",
+        Minus: "-",
+        Equal: "=",
+        Backquote: "`",
+      };
+      return map[code] || code;
+    }
+
+    function bindParam(id, key, fmt) {
+      const input = document.getElementById(id);
+      const label = document.getElementById(`v-${id.replace("p-", "")}`);
+      input.value = String(params[key]);
+      label.textContent = fmt(params[key]);
+      input.addEventListener("input", () => {
+        params[key] = Number(input.value);
+        label.textContent = fmt(params[key]);
+        saveParams();
+      });
+    }
+
+    async function ensureToken() {
+      if (token) return token;
+      const r = await fetch("/api/client-token");
+      const j = await r.json();
+      token = j.token;
+      localStorage.setItem(TOKEN_KEY, token);
+      return token;
+    }
+
+    function headers() {
+      return { "Content-Type": "application/json", "X-Client-Token": token };
+    }
+
+    function currentTarget() {
+      return targets[activeArm] || {};
+    }
+
+    function clampJoint(name, value) {
+      const lim = limits[name] || { min: -100, max: 100 };
+      return Math.max(lim.min, Math.min(lim.max, value));
+    }
+
+    function renderArmTabs() {
+      const tabs = document.getElementById("armTabs");
+      tabs.innerHTML = "";
+      arms.forEach((name) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        const live = teleopEnabled && teleopArm === name;
+        btn.textContent = live ? `${name} ●` : name;
+        btn.className = name === activeArm ? "active" : "";
+        btn.title = live ? "テレオペ中（トルクON）" : "表示・編集する腕";
+        btn.addEventListener("click", async () => {
+          if (calibMode) {
+            alert("キャリブモード中はアームを切り替えられません。保存またはキャンセルしてください。");
+            return;
+          }
+          activeArm = name;
+          renderArmTabs();
+          syncSliders(currentTarget(), true);
+          refreshCalibration();
+          // Move torque to the newly selected arm while teleop stays on (browser only).
+          if (controlMode === "browser" && teleopEnabled && teleopArm !== name) {
+            await setTeleopOnServer(true, name);
+          } else {
+            syncTeleopUi();
+          }
+        });
+        tabs.appendChild(btn);
+      });
+    }
+
+    function highlightSelectedJoint() {
+      const name = jointNames[selectedJointIdx];
+      document.getElementById("selectedJointLabel").textContent = name || "—";
+      jointNames.forEach((j) => {
+        const row = document.getElementById(`row-${j}`);
+        if (row) row.classList.toggle("selected", j === name);
+      });
+    }
+
+    function setInputMode(mode) {
+      params.mode = mode;
+      saveParams();
+      document.querySelectorAll("#modeTabs button").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.mode === mode);
+      });
+      document.querySelectorAll(".mode-panels .mode-panel").forEach((el) => {
+        el.classList.toggle("active", el.id === `panel-${mode}`);
+      });
+      document.getElementById("deadzoneRow").style.display = mode === "gamepad" ? "" : "none";
+      document.getElementById("padNameWrap").style.display = mode === "gamepad" ? "" : "none";
+      updateInputStatus();
+      // Avoid stale held keys when switching modes.
+      keysDown.clear();
+      keyEdgeArmed.clear();
+      listeningAction = null;
+      renderKeybindTable();
+    }
+
+    function updateInputStatus(extra) {
+      const dot = document.getElementById("inputDot");
+      const label = document.getElementById("inputModeLabel");
+      if (params.mode === "off") {
+        dot.className = "dot";
+        label.textContent = "input: off";
+      } else if (params.mode === "gamepad") {
+        dot.className = extra === "active" ? "dot ok" : "dot warn";
+        label.textContent = extra === "active" ? "input: gamepad" : "input: gamepad (待機)";
+      } else {
+        const focused = document.activeElement && (
+          document.activeElement.tagName === "INPUT" ||
+          document.activeElement.tagName === "TEXTAREA" ||
+          document.activeElement.isContentEditable
+        );
+        if (focused || listeningAction) {
+          dot.className = "dot warn";
+          label.textContent = listeningAction ? "input: キー待受中" : "input: keyboard (フォーム優先)";
+        } else {
+          dot.className = "dot ok";
+          label.textContent = "input: keyboard";
+        }
+      }
+    }
+
+    function renderKeybindTable() {
+      const tbody = document.querySelector("#keybindTable tbody");
+      tbody.innerHTML = "";
+      Object.entries(keybinds).forEach(([action, bind]) => {
+        const tr = document.createElement("tr");
+        const listening = listeningAction === action;
+        tr.innerHTML = `
+          <td>${bind.label}</td>
+          <td><button type="button" class="bind-btn${listening ? " listening" : ""}" data-action="${action}">
+            ${listening ? "キーを押す…" : codeLabel(bind.code)}
+          </button></td>`;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll("button.bind-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          listeningAction = btn.dataset.action;
+          renderKeybindTable();
+          updateInputStatus();
+        });
+      });
+    }
+
+    function actionForCode(code) {
+      for (const [action, bind] of Object.entries(keybinds)) {
+        if (bind.code && bind.code === code) return action;
+      }
+      return null;
+    }
+
+    async function loadInfo() {
+      const r = await fetch("/api/info");
+      if (!r.ok) throw new Error("info failed");
+      const info = await r.json();
+      limits = info.limits || {};
+      jointNames = info.joints && info.joints.length ? info.joints : Object.keys(limits);
+      arms = info.arms && info.arms.length ? info.arms : ["follower"];
+      if (!arms.includes(activeArm)) activeArm = arms[0];
+      if (selectedJointIdx >= jointNames.length) selectedJointIdx = 0;
+      if (typeof info.hand_teleop_available === "boolean") {
+        handTeleopAvailable = info.hand_teleop_available;
+      }
+      if (info.control_mode === "browser" || info.control_mode === "leader_follow") {
+        controlMode = info.control_mode;
+      }
+      renderArmTabs();
+      syncTeleopUi();
+      highlightSelectedJoint();
+
+      const cams = document.getElementById("cams");
+      cams.innerHTML = "";
+      (info.cameras || []).forEach((name) => {
+        const wrap = document.createElement("div");
+        wrap.className = "cam";
+        wrap.innerHTML = `<label>${name}</label><img alt="${name}" src="/api/stream/${encodeURIComponent(name)}" />`;
+        cams.appendChild(wrap);
+      });
+      if (!(info.cameras || []).length) {
+        cams.innerHTML = '<p class="hint">カメラ未接続（yaml の enabled / URL / index を確認）</p>';
+      }
+
+      const joints = document.getElementById("joints");
+      joints.innerHTML = "";
+      jointNames.forEach((name) => {
+        const lim = limits[name] || { min: -100, max: 100 };
+        const row = document.createElement("div");
+        row.className = "joint";
+        row.id = `row-${name}`;
+        row.innerHTML = `
+          <label for="j-${name}">${name}</label>
+          <input id="j-${name}" type="range" min="${lim.min}" max="${lim.max}" step="0.5" value="0" />
+          <span class="val" id="v-${name}">0.0</span>`;
+        joints.appendChild(row);
+        const input = row.querySelector("input");
+        input.addEventListener("input", () => {
+          document.getElementById(`v-${name}`).textContent = Number(input.value).toFixed(1);
+          applyAbsolute({ [name]: Number(input.value) });
+        });
+      });
+      highlightSelectedJoint();
+    }
+
+    let pending = null;
+    let timer = null;
+    function queueAction(partial) {
+      pending = { ...(pending || {}), ...partial };
+      if (timer) return;
+      timer = setTimeout(flushAction, params.intervalMs);
+    }
+
+    function applyAbsolute(partial) {
+      const arm = activeArm;
+      if (!targets[arm]) targets[arm] = {};
+      Object.entries(partial).forEach(([k, v]) => {
+        targets[arm][k] = clampJoint(k, Number(v));
+      });
+      syncSliders(targets[arm], true);
+      queueAction(partial);
+    }
+
+    function applyDelta(partial) {
+      const arm = activeArm;
+      const base = targets[arm] || {};
+      const next = {};
+      Object.entries(partial).forEach(([k, d]) => {
+        next[k] = clampJoint(k, Number(base[k] ?? 0) + Number(d));
+      });
+      applyAbsolute(next);
+    }
+
+    function renderTeleopArmButtons() {
+      const wrap = document.getElementById("teleopArmBtns");
+      if (!wrap) return;
+      wrap.innerHTML = "";
+      if (controlMode === "leader_follow") {
+        const note = document.createElement("p");
+        note.className = "hint";
+        note.style.margin = "0";
+        note.textContent = teleopEnabled
+          ? "leader を手で操作 → follower 追従中"
+          : "追従停止中。「追従 ON」で再開";
+        wrap.appendChild(note);
+        return;
+      }
+      arms.forEach((name) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.arm = name;
+        btn.textContent = `${name} ON`;
+        btn.disabled = !!calibMode;
+        const isActive = teleopEnabled && teleopArm === name;
+        btn.classList.toggle("active", isActive);
+        btn.classList.toggle("soft", !isActive);
+        btn.addEventListener("click", async () => {
+          if (calibMode) return;
+          // Same arm already ON → toggle OFF; otherwise switch torque to this arm.
+          if (teleopEnabled && teleopArm === name) {
+            await setTeleopOnServer(false, name);
+          } else {
+            activeArm = name;
+            renderArmTabs();
+            syncSliders(currentTarget(), true);
+            await setTeleopOnServer(true, name);
+          }
+        });
+        wrap.appendChild(btn);
+      });
+    }
+
+    function syncControlModeUi() {
+      document.querySelectorAll("#controlModeTabs button").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.mode === controlMode);
+        if (btn.dataset.mode === "leader_follow") {
+          btn.disabled = !handTeleopAvailable || !!calibMode;
+          btn.title = handTeleopAvailable
+            ? "物理 leader → follower 追従"
+            : "leader_arm.port が yaml にありません";
+        } else {
+          btn.disabled = !!calibMode;
+        }
+      });
+      const hint = document.getElementById("controlModeHint");
+      if (hint) {
+        hint.textContent = controlMode === "leader_follow"
+          ? "Leader follow 中: 物理 leader を手で動かすと follower が追従。スライダー操作は無効。ESTOP 後は「追従 ON」。"
+          : "Browser: スライダーで腕を駆動（同時トルクONは1腕）。Leader follow: 物理 leader を手で動かし follower が追従。";
+      }
+      const jointsPanel = document.querySelector(".panel-joints");
+      const stickPanel = document.querySelector(".panel-stick");
+      const inputPanel = document.querySelector(".panel-input");
+      const dim = controlMode === "leader_follow";
+      [jointsPanel, stickPanel, inputPanel].forEach((el) => {
+        if (el) el.style.opacity = dim ? "0.55" : "";
+      });
+    }
+
+    function syncTeleopUi() {
+      const btn = document.getElementById("teleopBtn");
+      const resumeBtn = document.getElementById("followResumeBtn");
+      const label = document.getElementById("teleopLabel");
+      const followMode = controlMode === "leader_follow";
+      if (followMode) {
+        btn.textContent = "追従 OFF";
+        btn.disabled = !!calibMode || !teleopEnabled;
+        if (resumeBtn) {
+          resumeBtn.hidden = !!teleopEnabled;
+          resumeBtn.disabled = !!calibMode;
+        }
+        label.textContent = teleopEnabled ? "HAND TELEOP (追従中)" : "HAND TELEOP (停止)";
+        label.style.color = teleopEnabled ? "var(--accent)" : "var(--warn)";
+      } else if (teleopEnabled) {
+        btn.textContent = "全腕テレオペ OFF";
+        btn.style.borderColor = "";
+        btn.style.color = "";
+        btn.disabled = !!calibMode;
+        if (resumeBtn) resumeBtn.hidden = true;
+        const armNote = teleopArm ? ` ${teleopArm}` : "";
+        label.textContent = `TELEOP ON${armNote}`;
+        label.style.color = "var(--accent)";
+      } else {
+        btn.textContent = "全腕テレオペ OFF";
+        btn.style.borderColor = "var(--warn)";
+        btn.style.color = "var(--warn)";
+        btn.disabled = true;
+        if (resumeBtn) resumeBtn.hidden = true;
+        label.textContent = "TELEOP OFF";
+        label.style.color = "var(--warn)";
+      }
+      renderTeleopArmButtons();
+      syncControlModeUi();
+    }
+
+    async function setControlModeOnServer(mode) {
+      await ensureToken();
+      const r = await fetch("/api/control_mode", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ mode }),
+      });
+      const j = await r.json();
+      if (!j.ok) {
+        document.getElementById("connLabel").textContent =
+          `mode: ${j.error || "failed"}`;
+        return j;
+      }
+      controlMode = j.control_mode || mode;
+      if (typeof j.hand_teleop_available === "boolean") {
+        handTeleopAvailable = j.hand_teleop_available;
+      }
+      teleopEnabled = !!j.teleop;
+      teleopArm = j.teleop_arm || null;
+      if (Array.isArray(j.arms) && j.arms.length) {
+        arms = j.arms;
+        if (!arms.includes(activeArm)) activeArm = arms[0];
+      }
+      if (j.targets) {
+        targets = j.targets;
+        syncSliders(currentTarget(), true);
+      }
+      renderArmTabs();
+      syncTeleopUi();
+      return j;
+    }
+
+    async function setTeleopOnServer(enabled, arm) {
+      await ensureToken();
+      const r = await fetch("/api/teleop", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ enabled, arm: arm || activeArm }),
+      });
+      const j = await r.json();
+      if (!j.ok) {
+        document.getElementById("connLabel").textContent = `teleop: ${j.error || "failed"}`;
+        return j;
+      }
+      teleopEnabled = !!j.teleop;
+      teleopArm = j.teleop_arm || null;
+      if (j.targets) {
+        targets = j.targets;
+        syncSliders(currentTarget(), true);
+      }
+      syncTeleopUi();
+      return j;
+    }
+
+    async function flushAction() {
+      timer = null;
+      if (!pending || sending) return;
+      if (!teleopEnabled || calibMode || controlMode === "leader_follow") {
+        pending = null;
+        return;
+      }
+      const joints = pending;
+      pending = null;
+      sending = true;
+      const arm = activeArm;
+      try {
+        await ensureToken();
+        const r = await fetch("/api/action", {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ arm, joints }),
+        });
+        const j = await r.json();
+        // Only sync from server on success — error payloads (e.g. old rate_limit)
+        // must not rewind the client's predicted pose.
+        if (j.ok && j.target) {
+          targets[arm] = j.target;
+          if (arm === activeArm) syncSliders(j.target, false);
+        }
+        if (!j.ok && j.error === "another_client_connected") {
+          document.getElementById("connLabel").textContent = "another client has control";
+        }
+        if (!j.ok && j.error === "teleop_disabled") {
+          teleopEnabled = false;
+          syncTeleopUi();
+        }
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        sending = false;
+        if (pending) flushAction();
+      }
+    }
+
+    function syncSliders(values, writeInput = true) {
+      Object.entries(values || {}).forEach(([name, val]) => {
+        const input = document.getElementById(`j-${name}`);
+        const label = document.getElementById(`v-${name}`);
+        if (!input) return;
+        if (writeInput && document.activeElement !== input) {
+          input.value = String(val);
+        }
+        if (label) label.textContent = Number(val).toFixed(1);
+      });
+    }
+
+    async function pollState() {
+      try {
+        const r = await fetch("/api/state");
+        const s = await r.json();
+        const dot = document.getElementById("connDot");
+        const label = document.getElementById("connLabel");
+        if (s.connected) {
+          dot.className = "dot ok";
+          label.textContent = `connected (${(s.arms || []).join(", ")})`;
+        } else {
+          dot.className = "dot bad";
+          label.textContent = "disconnected";
+        }
+        if (s.control_mode === "browser" || s.control_mode === "leader_follow") {
+          controlMode = s.control_mode;
+        }
+        if (typeof s.hand_teleop_available === "boolean") {
+          handTeleopAvailable = s.hand_teleop_available;
+        }
+        if (Array.isArray(s.arms) && s.arms.length && controlMode === "leader_follow") {
+          // Keep leader visible in tabs while hand device is active.
+          arms = s.arms;
+        }
+        if (typeof s.teleop === "boolean") {
+          teleopEnabled = s.teleop;
+          teleopArm = s.teleop_arm || null;
+          syncTeleopUi();
+        } else {
+          syncControlModeUi();
+        }
+        const el = document.getElementById("estopLabel");
+        const banner = document.getElementById("estopBanner");
+        const clearBtn = document.getElementById("clearBtn");
+        const estopBtn = document.getElementById("estopBtn");
+        if (s.estop) {
+          el.textContent = "ESTOP — 再開で解除";
+          el.style.color = "var(--danger)";
+          dot.className = "dot bad";
+          banner.classList.add("visible");
+          clearBtn.hidden = false;
+          estopBtn.hidden = true;
+        } else {
+          el.textContent = "";
+          banner.classList.remove("visible");
+          clearBtn.hidden = true;
+          estopBtn.hidden = false;
+        }
+        const rateEl = document.getElementById("rateLabel");
+        const hz = Math.round(Number(s.control_hz) || 0);
+        if (s.rate_mode === "approach") {
+          rateEl.textContent = `${hz}Hz 慎重`;
+          rateEl.style.color = "var(--warn)";
+        } else if (s.rate_mode === "cruise") {
+          rateEl.textContent = `${hz}Hz 高速`;
+          rateEl.style.color = "var(--accent)";
+        } else {
+          rateEl.textContent = "";
+        }
+        const scene = s.scene || {};
+        rateEl.title = [s.rate_reason, scene.summary].filter(Boolean).join(" · ");
+        const calibEl = document.getElementById("calibLabel");
+        if (s.calib_mode) {
+          calibEl.textContent = `CALIB ${s.calib_arm || ""}`;
+          calibEl.style.color = "var(--warn)";
+          if (!calibMode) {
+            calibMode = true;
+            setCalibUi(true);
+            refreshCalibration();
+          }
+        } else if (calibMode && !document.activeElement?.closest?.(".calib-table")) {
+          calibEl.textContent = "";
+        } else if (!s.calib_mode) {
+          calibEl.textContent = "";
+        }
+        if (s.targets) {
+          if (!pending && !sending) {
+            targets = s.targets;
+            syncSliders(currentTarget(), true);
+          }
+        } else if (s.target) {
+          if (!pending && !sending) {
+            targets[activeArm] = s.target;
+            syncSliders(s.target, true);
+          }
+        }
+        if (s.has_home || s.homing) {
+          updateHomeHint(s);
+        }
+        if (Array.isArray(s.homing) && s.homing.length) {
+          label.textContent = `初期位置へ移動中: ${s.homing.join(", ")}`;
+        }
+      } catch (e) {
+        document.getElementById("connDot").className = "dot bad";
+        document.getElementById("connLabel").textContent = "unreachable";
+      }
+    }
+
+    document.getElementById("teleopBtn").addEventListener("click", async () => {
+      try {
+        // Browser: all-arm OFF. Leader-follow: stop follower tracking.
+        if (teleopEnabled) await setTeleopOnServer(false, activeArm);
+      } catch (e) {
+        document.getElementById("connLabel").textContent = "teleop API unreachable";
+      }
+    });
+    document.getElementById("followResumeBtn").addEventListener("click", async () => {
+      try {
+        if (controlMode === "leader_follow" && !teleopEnabled) {
+          await setTeleopOnServer(true, "follower");
+        }
+      } catch (e) {
+        document.getElementById("connLabel").textContent = "teleop API unreachable";
+      }
+    });
+    document.querySelectorAll("#controlModeTabs button").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const mode = btn.dataset.mode;
+        if (!mode || mode === controlMode) return;
+        try {
+          document.getElementById("connLabel").textContent = `switching to ${mode}…`;
+          await setControlModeOnServer(mode);
+          document.getElementById("connLabel").textContent =
+            mode === "leader_follow" ? "Leader follow — 手で leader を動かしてください" : "Browser mode";
+        } catch (e) {
+          document.getElementById("connLabel").textContent = "control_mode API unreachable";
+        }
+      });
+    });
+    async function triggerEstop() {
+      const r = await fetch("/api/estop", { method: "POST" });
+      const j = await r.json();
+      if (!j.ok) {
+        document.getElementById("connLabel").textContent = j.error || "estop failed";
+      } else if (j.warning) {
+        document.getElementById("connLabel").textContent = `ESTOP (${j.warning})`;
+      }
+      teleopEnabled = false;
+      teleopArm = null;
+      syncTeleopUi();
+      await pollState();
+    }
+
+    async function clearEstop() {
+      const r = await fetch("/api/estop/clear", { method: "POST" });
+      const j = await r.json();
+      if (!j.ok) {
+        document.getElementById("connLabel").textContent = j.error || "再開に失敗しました";
+      } else if (j.warning) {
+        document.getElementById("connLabel").textContent =
+          `再開済み（警告: ${j.warning}）— テレオペ ON で操作`;
+      } else {
+        document.getElementById("connLabel").textContent = "再開済み — テレオペ ON で操作";
+      }
+      teleopEnabled = false;
+      teleopArm = null;
+      syncTeleopUi();
+      await pollState();
+    }
+
+    document.getElementById("saveHomeBtn").addEventListener("click", () => {
+      // Active arm tab only (merge keeps the other arm's nest on disk).
+      void saveHome(activeArm);
+    });
+    document.getElementById("saveHomeBothBtn").addEventListener("click", () => {
+      void saveHome(null);
+    });
+    document.getElementById("goHomeBtn").addEventListener("click", () => {
+      void goHomeApi(activeArm);
+    });
+    document.getElementById("goHomeBothBtn").addEventListener("click", () => {
+      void goHomeApi(null);
+    });
+    document.getElementById("estopBtn").addEventListener("click", () => {
+      triggerEstop().catch(() => {
+        document.getElementById("connLabel").textContent = "estop API unreachable";
+      });
+    });
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      clearEstop().catch(() => {
+        document.getElementById("connLabel").textContent = "再開 API unreachable";
+      });
+    });
+    document.getElementById("clearBtnBanner").addEventListener("click", () => {
+      clearEstop().catch(() => {
+        document.getElementById("connLabel").textContent = "再開 API unreachable";
+      });
+    });
+    document.getElementById("releaseBtn").addEventListener("click", async () => {
+      await ensureToken();
+      await fetch("/api/release", { method: "POST", headers: headers() });
+    });
+
+    function axisDeadzone(v) {
+      const a = Math.abs(v);
+      if (a <= params.deadzone) return 0;
+      const sign = v < 0 ? -1 : 1;
+      return sign * (a - params.deadzone) / (1 - params.deadzone);
+    }
+
+    function buttonPressed(gp, index) {
+      const b = gp.buttons[index];
+      if (!b) return false;
+      return typeof b === "object" ? !!b.pressed : b > 0.5;
+    }
+
+    function edge(gpIndex, btnIndex, pressed) {
+      const key = `${gpIndex}:${btnIndex}`;
+      const was = !!prevButtons[key];
+      prevButtons[key] = pressed;
+      return pressed && !was;
+    }
+
+    function pickGamepad() {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (let i = 0; i < pads.length; i++) {
+        if (pads[i]) return pads[i];
+      }
+      return null;
+    }
+
+    function switchArm(delta) {
+      if (arms.length < 2) return;
+      const idx = arms.indexOf(activeArm);
+      const next = arms[(idx + delta + arms.length) % arms.length];
+      activeArm = next;
+      renderArmTabs();
+      syncSliders(currentTarget(), true);
+      if (controlMode === "browser" && teleopEnabled && teleopArm !== next) {
+        void setTeleopOnServer(true, next);
+      }
+    }
+
+    async function saveHome(armOrNull) {
+      try {
+        const body = armOrNull ? { arm: armOrNull } : {};
+        const r = await fetch("/api/home/save", {
+          method: "POST",
+          headers: { ...headers(), "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const j = await r.json();
+        if (!j.ok) {
+          document.getElementById("connLabel").textContent = j.error || "save home failed";
+          return;
+        }
+        const arms = (j.saved_arms || []).join(", ");
+        document.getElementById("connLabel").textContent = `初期位置を保存: ${arms}`;
+        updateHomeHint(j);
+      } catch (e) {
+        document.getElementById("connLabel").textContent = "save home API unreachable";
+      }
+    }
+
+    async function goHomeApi(armOrNull) {
+      try {
+        const body = armOrNull ? { arm: armOrNull } : {};
+        const r = await fetch("/api/home/go", {
+          method: "POST",
+          headers: { ...headers(), "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const j = await r.json();
+        if (!j.ok) {
+          document.getElementById("connLabel").textContent = j.error || "go home failed";
+          return;
+        }
+        const src = j.sources || {};
+        const note = Object.entries(src)
+          .map(([a, s]) => `${a}:${s === "file" ? "保存値" : "既定0°"}`)
+          .join(" ");
+        document.getElementById("connLabel").textContent = `初期位置へ移動中… ${note}`;
+        teleopEnabled = false;
+        teleopArm = null;
+        syncTeleopUi();
+      } catch (e) {
+        document.getElementById("connLabel").textContent = "go home API unreachable";
+      }
+    }
+
+    function goHome() {
+      // Keyboard / pad: nest pose for the active arm only.
+      void goHomeApi(activeArm);
+    }
+
+    function updateHomeHint(s) {
+      const el = document.getElementById("homeHint");
+      if (!el) return;
+      const has = s.has_home || {};
+      const savedArms = s.arms && !Array.isArray(s.arms) ? s.arms : null;
+      const names = Object.keys(has).length
+        ? Object.keys(has)
+        : savedArms
+          ? Object.keys(savedArms)
+          : Array.isArray(s.arms)
+            ? s.arms
+            : [];
+      const homing = s.homing || [];
+      const parts = names.map((a) => {
+        const ok = has[a] ?? Boolean(savedArms && savedArms[a]);
+        return `${a}:${ok ? "保存済" : "未保存"}`;
+      });
+      let text = parts.length ? parts.join(" / ") : "初期位置未保存";
+      if (homing.length) text += ` — 移動中: ${homing.join(", ")}`;
+      else text += " — 選択腕を動かして「選択腕の初期位置を保存」（片腕ずつ可）";
+      if (s.home_path || s.path) text += `（${s.home_path || s.path}）`;
+      el.textContent = text;
+    }
+
+    function toggleGripper() {
+      if (!jointNames.includes("gripper")) return;
+      const g = Number(currentTarget().gripper ?? 0);
+      applyAbsolute({ gripper: g < 50 ? 100 : 0 });
+    }
+
+    function isTypingTarget(el) {
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+    }
+
+    function fireKeyEdge(action) {
+      if (keyEdgeArmed.has(action)) return;
+      keyEdgeArmed.add(action);
+      if (action === "jointPrev") {
+        selectedJointIdx = (selectedJointIdx - 1 + jointNames.length) % jointNames.length;
+        highlightSelectedJoint();
+      } else if (action === "jointNext") {
+        selectedJointIdx = (selectedJointIdx + 1) % jointNames.length;
+        highlightSelectedJoint();
+      } else if (action === "armPrev") {
+        switchArm(-1);
+      } else if (action === "armNext") {
+        switchArm(1);
+      } else if (action === "gripToggle") {
+        toggleGripper();
+      } else if (action === "home") {
+        goHome();
+      } else if (action === "estop") {
+        fetch("/api/estop", { method: "POST" }).then(() => pollState());
+      }
+    }
+
+    function tickKeyboard(now) {
+      if (params.mode !== "keyboard" || !jointNames.length) return;
+      if (listeningAction || isTypingTarget(document.activeElement)) {
+        updateInputStatus();
+        return;
+      }
+
+      ["jointPrev", "jointNext", "armPrev", "armNext", "gripToggle", "home", "estop"].forEach((action) => {
+        const code = keybinds[action].code;
+        if (code && keysDown.has(code)) fireKeyEdge(action);
+        else keyEdgeArmed.delete(action);
+      });
+
+      if (now - lastInputApplyMs < params.intervalMs) return;
+      lastInputApplyMs = now;
+      const j = jointNames[selectedJointIdx];
+      let delta = 0;
+      if (keybinds.jogPlus.code && keysDown.has(keybinds.jogPlus.code)) delta += params.maxDeg;
+      if (keybinds.jogMinus.code && keysDown.has(keybinds.jogMinus.code)) delta -= params.maxDeg;
+      if (delta !== 0 && j) applyDelta({ [j]: delta });
+
+      let g = 0;
+      if (keybinds.gripPlus.code && keysDown.has(keybinds.gripPlus.code)) g += params.gripSpeed;
+      if (keybinds.gripMinus.code && keysDown.has(keybinds.gripMinus.code)) g -= params.gripSpeed;
+      if (g !== 0 && jointNames.includes("gripper")) applyDelta({ gripper: g });
+      updateInputStatus();
+    }
+
+    function tickGamepad(now) {
+      const gp = pickGamepad();
+      const nameEl = document.getElementById("padName");
+      if (!gp) {
+        nameEl.textContent = "未検出（ボタンを押すと認識）";
+        if (params.mode === "gamepad") updateInputStatus("idle");
+        return;
+      }
+      nameEl.textContent = gp.id || `index ${gp.index}`;
+
+      if (params.mode !== "gamepad" || !jointNames.length) {
+        for (let i = 0; i < gp.buttons.length; i++) edge(gp.index, i, buttonPressed(gp, i));
+        if (params.mode === "gamepad") updateInputStatus("idle");
+        return;
+      }
+
+      updateInputStatus("active");
+      if (edge(gp.index, 14, buttonPressed(gp, 14))) {
+        selectedJointIdx = (selectedJointIdx - 1 + jointNames.length) % jointNames.length;
+        highlightSelectedJoint();
+      }
+      if (edge(gp.index, 15, buttonPressed(gp, 15))) {
+        selectedJointIdx = (selectedJointIdx + 1) % jointNames.length;
+        highlightSelectedJoint();
+      }
+      if (edge(gp.index, 4, buttonPressed(gp, 4))) switchArm(-1);
+      if (edge(gp.index, 5, buttonPressed(gp, 5))) switchArm(1);
+      if (edge(gp.index, 0, buttonPressed(gp, 0))) toggleGripper();
+      if (edge(gp.index, 3, buttonPressed(gp, 3))) goHome();
+      if (buttonPressed(gp, 8) && edge(gp.index, 1, buttonPressed(gp, 1))) {
+        fetch("/api/estop", { method: "POST" }).then(() => pollState());
+      }
+
+      if (now - lastInputApplyMs >= params.intervalMs) {
+        lastInputApplyMs = now;
+        const ly = axisDeadzone(gp.axes[1] ?? 0);
+        if (ly !== 0) {
+          const j = jointNames[selectedJointIdx];
+          applyDelta({ [j]: -ly * params.maxDeg });
+        }
+        const ry = axisDeadzone(gp.axes[3] ?? 0);
+        if (ry !== 0 && jointNames.includes("gripper")) {
+          applyDelta({ gripper: -ry * params.gripSpeed });
+        }
+      }
+    }
+
+    function inputLoop(now) {
+      if (params.mode === "gamepad") tickGamepad(now);
+      else if (params.mode === "keyboard") tickKeyboard(now);
+      else {
+        const gp = pickGamepad();
+        if (gp) {
+          for (let i = 0; i < gp.buttons.length; i++) edge(gp.index, i, buttonPressed(gp, i));
+        }
+        updateInputStatus();
+      }
+      requestAnimationFrame(inputLoop);
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (listeningAction) {
+        e.preventDefault();
+        if (e.code === "Escape") {
+          listeningAction = null;
+          renderKeybindTable();
+          updateInputStatus();
+          return;
+        }
+        if (e.code === "Backspace" || e.code === "Delete") {
+          keybinds[listeningAction].code = "";
+          saveKeybinds();
+          listeningAction = null;
+          renderKeybindTable();
+          updateInputStatus();
+          return;
+        }
+        // Prevent duplicate bindings: clear other actions using this code.
+        Object.keys(keybinds).forEach((action) => {
+          if (action !== listeningAction && keybinds[action].code === e.code) {
+            keybinds[action].code = "";
+          }
+        });
+        keybinds[listeningAction].code = e.code;
+        saveKeybinds();
+        listeningAction = null;
+        renderKeybindTable();
+        updateInputStatus();
+        return;
+      }
+
+      if (params.mode !== "keyboard") return;
+      if (isTypingTarget(e.target)) return;
+      const action = actionForCode(e.code);
+      if (!action) return;
+      e.preventDefault();
+      keysDown.add(e.code);
+    });
+
+    window.addEventListener("keyup", (e) => {
+      keysDown.delete(e.code);
+      const action = actionForCode(e.code);
+      if (action) keyEdgeArmed.delete(action);
+    });
+
+    window.addEventListener("blur", () => {
+      keysDown.clear();
+      keyEdgeArmed.clear();
+    });
+
+    window.addEventListener("gamepaddisconnected", () => {
+      prevButtons = {};
+    });
+
+    (function setupStick() {
+      const pad = document.getElementById("stick");
+      const knob = document.getElementById("knob");
+      let active = false;
+      let basePan = 0;
+      let baseLift = 0;
+      const maxR = 55;
+      const gain = 25;
+
+      function setKnob(x, y) {
+        knob.style.left = `calc(50% + ${x}px)`;
+        knob.style.top = `calc(50% + ${y}px)`;
+      }
+
+      function onMove(clientX, clientY) {
+        const rect = pad.getBoundingClientRect();
+        let dx = clientX - (rect.left + rect.width / 2);
+        let dy = clientY - (rect.top + rect.height / 2);
+        const dist = Math.hypot(dx, dy) || 1;
+        if (dist > maxR) {
+          dx = (dx / dist) * maxR;
+          dy = (dy / dist) * maxR;
+        }
+        setKnob(dx, dy);
+        applyAbsolute({
+          shoulder_pan: basePan + (dx / maxR) * gain,
+          shoulder_lift: baseLift - (dy / maxR) * gain,
+        });
+      }
+
+      function end() {
+        active = false;
+        setKnob(0, 0);
+      }
+
+      pad.addEventListener("pointerdown", (e) => {
+        active = true;
+        const t = currentTarget();
+        basePan = Number(t.shoulder_pan ?? 0);
+        baseLift = Number(t.shoulder_lift ?? 0);
+        pad.setPointerCapture(e.pointerId);
+        onMove(e.clientX, e.clientY);
+      });
+      pad.addEventListener("pointermove", (e) => {
+        if (!active) return;
+        onMove(e.clientX, e.clientY);
+      });
+      pad.addEventListener("pointerup", end);
+      pad.addEventListener("pointercancel", end);
+    })();
+
+    function selectedCalibMotors() {
+      return [...document.querySelectorAll("#calibMotorChecks input:checked")].map((el) => el.value);
+    }
+
+    function setCalibUi(active) {
+      calibMode = active;
+      document.getElementById("calibBanner").classList.toggle("active", active);
+      [
+        "calibDriveBtn",
+        "calibMidBtn",
+        "calibCapMinBtn",
+        "calibCapMaxBtn",
+        "calibRangeStartBtn",
+        "calibRangeStopBtn",
+        "calibSaveBtn",
+        "calibCancelBtn",
+      ].forEach((id) => {
+        document.getElementById(id).disabled = !active;
+      });
+      document.getElementById("calibEnterBtn").disabled = active;
+      if (!active) {
+        calibDrive = false;
+        stopCalibJogHold();
+      }
+      syncTeleopUi();
+      syncCalibDriveUi();
+      if (active) {
+        if (params.mode !== "off") setInputMode("off");
+        if (!calibPollTimer) calibPollTimer = setInterval(refreshCalibration, 200);
+      } else if (calibPollTimer) {
+        clearInterval(calibPollTimer);
+        calibPollTimer = null;
+      }
+    }
+
+    function syncCalibDriveUi() {
+      const btn = document.getElementById("calibDriveBtn");
+      const panel = document.getElementById("calibDrivePanel");
+      btn.textContent = calibDrive ? "ブラウザ駆動 OFF（手で動かす）" : "ブラウザ駆動 ON";
+      btn.style.borderColor = calibDrive ? "var(--warn)" : "";
+      btn.style.color = calibDrive ? "var(--warn)" : "";
+      panel.classList.toggle("active", calibMode && calibDrive);
+      renderCalibJogGrid();
+      const banner = document.getElementById("calibBanner");
+      banner.textContent = calibDrive
+        ? "キャリブモード中: ブラウザ駆動 ON（トルク ON）。下の ± で動かし、min/max または範囲記録で端を取ってください。"
+        : "キャリブモード中: 初期はトルク OFF（手で可）。手で動かしにくいときは「ブラウザ駆動」を ON にしてジョグしながら min/max を取ってください。";
+    }
+
+    function renderCalibJogGrid() {
+      const grid = document.getElementById("calibJogGrid");
+      if (!calibMode || !calibDrive) {
+        grid.innerHTML = "";
+        return;
+      }
+      const selected = new Set(selectedCalibMotors());
+      const motors = selected.size ? [...selected] : [...jointNames];
+      const prevFocus = document.activeElement && document.activeElement.dataset
+        ? document.activeElement.dataset.jogMotor
+        : null;
+      grid.innerHTML = "";
+      motors.forEach((name) => {
+        const item = document.createElement("div");
+        item.className = "jog-item";
+        item.innerHTML = `
+          <span class="name">${name}</span>
+          <div class="jog-btns">
+            <button type="button" data-jog-motor="${name}" data-jog-dir="-1" title="−ステップ">−</button>
+            <button type="button" data-jog-motor="${name}" data-jog-dir="1" title="+ステップ">+</button>
+          </div>`;
+        grid.appendChild(item);
+      });
+      grid.querySelectorAll("button[data-jog-motor]").forEach((btn) => {
+        const motor = btn.dataset.jogMotor;
+        const dir = Number(btn.dataset.jogDir);
+        const start = (ev) => {
+          ev.preventDefault();
+          startCalibJogHold(motor, dir);
+        };
+        const stop = (ev) => {
+          ev.preventDefault();
+          stopCalibJogHold();
+        };
+        btn.addEventListener("pointerdown", start);
+        btn.addEventListener("pointerup", stop);
+        btn.addEventListener("pointerleave", stop);
+        btn.addEventListener("pointercancel", stop);
+        if (prevFocus && prevFocus === motor && Number(btn.dataset.jogDir) === 1) {
+          // keep layout stable; no autofocus needed
+        }
+      });
+    }
+
+    function stopCalibJogHold() {
+      if (calibJogHoldTimer != null) {
+        clearInterval(calibJogHoldTimer);
+        calibJogHoldTimer = null;
+      }
+    }
+
+    function startCalibJogHold(motor, dir) {
+      stopCalibJogHold();
+      const stepOnce = () => {
+        void calibJogOne(motor, dir * calibJogStep);
+      };
+      stepOnce();
+      calibJogHoldTimer = setInterval(stepOnce, 40);
+    }
+
+    async function calibJogOne(motor, delta) {
+      if (!calibMode || !calibDrive || calibJogBusy || !delta) return;
+      calibJogBusy = true;
+      try {
+        const j = await calibPost("/api/calibration/jog", { deltas: { [motor]: delta } });
+        if (!j.ok) {
+          document.getElementById("calibStatus").textContent = `ジョグ失敗: ${j.error || ""}`;
+          stopCalibJogHold();
+          return;
+        }
+        if (j.raw) calibRaw = { ...calibRaw, ...j.raw };
+        if (j.calibration) calibDraft = j.calibration;
+        if (j.recording) calibRecording = j.recording;
+        renderCalibTable();
+      } catch (e) {
+        document.getElementById("calibStatus").textContent = "jog API unreachable";
+        stopCalibJogHold();
+      } finally {
+        calibJogBusy = false;
+      }
+    }
+
+    function renderCalibMotorChecks() {
+      const wrap = document.getElementById("calibMotorChecks");
+      wrap.innerHTML = "";
+      jointNames.forEach((name) => {
+        const id = `calib-m-${name}`;
+        const label = document.createElement("label");
+        label.innerHTML = `<input type="checkbox" id="${id}" value="${name}" ${
+          name === "gripper" ? "checked" : ""
+        } /> ${name}`;
+        wrap.appendChild(label);
+        const input = label.querySelector("input");
+        input.addEventListener("change", () => {
+          if (calibDrive) renderCalibJogGrid();
+        });
+      });
+    }
+
+    function renderCalibTable() {
+      const tbody = document.getElementById("calibTableBody");
+      const editing = document.activeElement && document.activeElement.closest(".calib-table");
+      if (editing) {
+        // Only refresh raw column while typing in number inputs.
+        jointNames.forEach((name) => {
+          const rawEl = document.getElementById(`calib-raw-${name}`);
+          if (rawEl) rawEl.textContent = calibRaw[name] != null ? String(calibRaw[name]) : "—";
+        });
+        return;
+      }
+      tbody.innerHTML = "";
+      jointNames.forEach((name) => {
+        const d = calibDraft[name] || {};
+        const tr = document.createElement("tr");
+        const rec = calibRecording.includes(name) ? " ●" : "";
+        tr.innerHTML = `
+          <td>${name}${rec}</td>
+          <td class="raw" id="calib-raw-${name}">${calibRaw[name] != null ? calibRaw[name] : "—"}</td>
+          <td><input type="number" data-motor="${name}" data-field="homing_offset" value="${d.homing_offset ?? 0}" step="1" ${calibMode ? "" : "disabled"} /></td>
+          <td><input type="number" data-motor="${name}" data-field="range_min" value="${d.range_min ?? 0}" step="1" ${calibMode ? "" : "disabled"} /></td>
+          <td><input type="number" data-motor="${name}" data-field="range_max" value="${d.range_max ?? 0}" step="1" ${calibMode ? "" : "disabled"} /></td>`;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll("input[type=number]").forEach((input) => {
+        input.addEventListener("change", async () => {
+          const motor = input.dataset.motor;
+          const field = input.dataset.field;
+          const body = { motors: { [motor]: { [field]: Number(input.value) } } };
+          const r = await calibPost("/api/calibration/update", body);
+          if (r.calibration) {
+            calibDraft = r.calibration;
+            renderCalibTable();
+          }
+          if (!r.ok) {
+            document.getElementById("calibStatus").textContent = `エラー: ${r.error || "update"}`;
+          }
+        });
+      });
+    }
+
+    async function calibPost(path, body) {
+      await ensureToken();
+      const r = await fetch(path, {
+        method: "POST",
+        headers: headers(),
+        body: body != null ? JSON.stringify(body) : undefined,
+      });
+      return r.json();
+    }
+
+    async function refreshCalibration() {
+      const arm = activeArm;
+      try {
+        const r = await fetch(`/api/calibration?arm=${encodeURIComponent(arm)}`);
+        const j = await r.json();
+        if (!j.ok) {
+          document.getElementById("calibStatus").textContent = `読込失敗: ${j.error || ""}`;
+          return;
+        }
+        calibDraft = j.calibration || {};
+        calibRaw = j.raw || {};
+        calibRecording = j.recording || [];
+        if (j.calib_mode !== calibMode) setCalibUi(!!j.calib_mode);
+        if (typeof j.drive === "boolean" && j.drive !== calibDrive) {
+          calibDrive = j.drive;
+          syncCalibDriveUi();
+        }
+        renderCalibTable();
+        const path = j.path ? ` → ${j.path}` : "";
+        const driveNote = j.calib_mode && j.drive ? " / ブラウザ駆動 ON" : "";
+        document.getElementById("calibStatus").textContent = j.calib_mode
+          ? `キャリブ中 (${j.arm} / ${j.robot_id})${path}${driveNote}` +
+            (calibRecording.length ? ` / 記録中: ${calibRecording.join(", ")}` : "")
+          : `表示中 (${j.arm} / ${j.robot_id})${path} — 編集するには「キャリブ開始」`;
+      } catch (e) {
+        document.getElementById("calibStatus").textContent = "calibration API unreachable";
+      }
+    }
+
+    function setupCalibrationUi() {
+      document.getElementById("calibEnterBtn").addEventListener("click", async () => {
+        const j = await calibPost("/api/calibration/enter", { arm: activeArm });
+        if (!j.ok) {
+          document.getElementById("calibStatus").textContent = `開始失敗: ${j.error}`;
+          return;
+        }
+        calibDraft = j.calibration || {};
+        calibDrive = false;
+        setCalibUi(true);
+        renderCalibTable();
+        document.getElementById("calibStatus").textContent =
+          `キャリブ開始 (${j.arm}). 手で動かすか、ブラウザ駆動 ON でジョグして min/max を取ってください。`;
+      });
+
+      document.getElementById("calibDriveBtn").addEventListener("click", async () => {
+        const next = !calibDrive;
+        const j = await calibPost("/api/calibration/drive", { enabled: next });
+        if (!j.ok) {
+          document.getElementById("calibStatus").textContent = `駆動切替失敗: ${j.error}`;
+          return;
+        }
+        calibDrive = !!j.drive;
+        if (j.raw) calibRaw = j.raw;
+        syncCalibDriveUi();
+        document.getElementById("calibStatus").textContent = calibDrive
+          ? "ブラウザ駆動 ON — チェックしたモータを ± で動かしてください（押しっぱなし可）"
+          : "ブラウザ駆動 OFF — 手で動かせます";
+      });
+
+      document.querySelectorAll("#calibStepTabs button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          calibJogStep = Number(btn.dataset.step) || 20;
+          document.querySelectorAll("#calibStepTabs button").forEach((b) => {
+            b.classList.toggle("active", b === btn);
+          });
+        });
+      });
+
+      document.getElementById("calibMidBtn").addEventListener("click", async () => {
+        const motors = selectedCalibMotors();
+        const j = await calibPost("/api/calibration/mid", { motors });
+        document.getElementById("calibStatus").textContent = j.ok
+          ? `中点設定 OK: ${motors.join(", ")}（ブラウザ駆動は OFF になりました）`
+          : `中点失敗: ${j.error}`;
+        if (j.ok) {
+          calibDrive = false;
+          syncCalibDriveUi();
+        }
+        if (j.calibration) {
+          calibDraft = j.calibration;
+          renderCalibTable();
+        }
+      });
+
+      document.getElementById("calibCapMinBtn").addEventListener("click", async () => {
+        const motors = selectedCalibMotors();
+        const j = await calibPost("/api/calibration/capture", { motors, endpoint: "min" });
+        document.getElementById("calibStatus").textContent = j.ok
+          ? `min キャプチャ: ${JSON.stringify(j.raw)}`
+          : `失敗: ${j.error}`;
+        if (j.calibration) {
+          calibDraft = j.calibration;
+          renderCalibTable();
+        }
+      });
+
+      document.getElementById("calibCapMaxBtn").addEventListener("click", async () => {
+        const motors = selectedCalibMotors();
+        const j = await calibPost("/api/calibration/capture", { motors, endpoint: "max" });
+        document.getElementById("calibStatus").textContent = j.ok
+          ? `max キャプチャ: ${JSON.stringify(j.raw)}`
+          : `失敗: ${j.error}`;
+        if (j.calibration) {
+          calibDraft = j.calibration;
+          renderCalibTable();
+        }
+      });
+
+      document.getElementById("calibRangeStartBtn").addEventListener("click", async () => {
+        const motors = selectedCalibMotors();
+        const j = await calibPost("/api/calibration/range/start", { motors });
+        document.getElementById("calibStatus").textContent = j.ok
+          ? `範囲記録中: ${(j.recording || []).join(", ")} — 端まで動かしてストップ`
+          : `失敗: ${j.error}`;
+      });
+
+      document.getElementById("calibRangeStopBtn").addEventListener("click", async () => {
+        const j = await calibPost("/api/calibration/range/stop", {});
+        document.getElementById("calibStatus").textContent = j.ok
+          ? "範囲記録を反映しました"
+          : `失敗: ${j.error}`;
+        if (j.calibration) {
+          calibDraft = j.calibration;
+          renderCalibTable();
+        }
+      });
+
+      document.getElementById("calibSaveBtn").addEventListener("click", async () => {
+        if (!confirm("キャリブをモータと JSON に保存し、トルクを復帰しますか？")) return;
+        const j = await calibPost("/api/calibration/save", {});
+        document.getElementById("calibStatus").textContent = j.ok
+          ? `保存完了: ${j.path || ""}`
+          : `保存失敗: ${j.error}`;
+        if (j.ok) {
+          setCalibUi(false);
+          await refreshCalibration();
+          await pollState();
+        }
+      });
+
+      document.getElementById("calibCancelBtn").addEventListener("click", async () => {
+        const j = await calibPost("/api/calibration/cancel", {});
+        document.getElementById("calibStatus").textContent = j.ok
+          ? "キャンセル（元のキャリブを復元）"
+          : `キャンセル失敗: ${j.error}`;
+        setCalibUi(false);
+        await refreshCalibration();
+        await pollState();
+      });
+    }
+
+    (async function boot() {
+      loadParams();
+      loadCamScale();
+      loadKeybinds();
+      bindParam("p-deadzone", "deadzone", (v) => v.toFixed(2));
+      bindParam("p-maxdeg", "maxDeg", (v) => v.toFixed(1));
+      bindParam("p-grip", "gripSpeed", (v) => v.toFixed(1));
+      bindParam("p-interval", "intervalMs", (v) => String(Math.round(v)));
+
+      document.querySelectorAll("#modeTabs button").forEach((btn) => {
+        btn.addEventListener("click", () => setInputMode(btn.dataset.mode));
+      });
+      document.querySelectorAll("#camScaleTabs button").forEach((btn) => {
+        btn.addEventListener("click", () => applyCamScale(btn.dataset.scale));
+      });
+      applyCamScale(camScale);
+      document.getElementById("resetKeysBtn").addEventListener("click", () => {
+        keybinds = structuredClone(DEFAULT_KEYBINDS);
+        saveKeybinds();
+        listeningAction = null;
+        renderKeybindTable();
+      });
+
+      setInputMode(params.mode);
+      renderKeybindTable();
+      setupCalibrationUi();
+      syncTeleopUi();
+
+      await ensureToken();
+      await loadInfo();
+      renderCalibMotorChecks();
+      await refreshCalibration();
+      await pollState();
+      setInterval(pollState, 500);
+      requestAnimationFrame(inputLoop);
+    })();
+  </script>
+</body>
+</html>

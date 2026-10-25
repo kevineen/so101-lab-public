@@ -1,0 +1,28 @@
+---
+description: >-
+  ラボ PC 構成（用途・スペック・IP・保持データ・転送）。SSH / rsync / 学習ホスト /
+  Thor 推論 / マルチホストの話では先に configs/lab_hosts.yaml を読む。
+alwaysApply: true
+---
+
+# Lab hosts（PC 構成・単一ファイル）
+
+正本は **1 ファイル**だけ:
+
+- `configs/lab_hosts.yaml` — 役割・パス・ポート・転送・独占・**いまの IP/SSH**・`this_host`
+- 無いとき: `cp configs/lab_hosts.yaml.example configs/lab_hosts.yaml` して編集するよう案内
+- 手順の散文: `docs/07_multi_host.md` · 転送コマンド: `docs/23_data_transfer.md`
+
+## 必須動作
+
+1. 別マシンへ触る・データを送る・どこで学習/推論するか決める前に `lab_hosts.yaml` を読む
+2. SSH は `hosts.<id>.network.ssh`（Tailscale IP があれば優先）。推測で IP を埋めない
+3. `transfers` と `exclusivity_forbidden` に従う（Pi で本格学習しない、二重制御しない）
+4. `lab_hosts.yaml` と `dataset.local.env` はコミットしない
+5. 実機トルク ON・長時間 GPU はユーザー確認後のみ（`docs/reports/AGENT.md` と同方針）
+
+## 疎通の型
+
+```bash
+ssh -o BatchMode=yes <hosts.*.network.ssh> 'hostname; echo ok'
+```
