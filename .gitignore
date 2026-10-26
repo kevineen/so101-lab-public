@@ -52,6 +52,9 @@ experiments/so101_trainswap/artifacts/*
 # Personal verification progress (cp from docs/checklists/*.checklist.md)
 docs/checklists/*.local.md
 
+# Local-only setup/workflow memo (not published; the public-safe steps live in README)
+/setup.md
+
 # Quest teleop settings UI live overrides (merged over quest_teleop.yaml)
 configs/quest_teleop.local.overrides.yaml
 

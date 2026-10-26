@@ -1059,7 +1059,7 @@ class RobotSession(CalibrationMixin):
                 self._tick_homing_unlocked(step)
                 return
             if self._control_mode == MODE_LEADER_FOLLOW:
-                self._tick_leader_follow_unlocked(step)
+                self._tick_leader_follow_unlocked()
                 return
             if not self._teleop_enabled or not self._teleop_arm:
                 return
@@ -1074,8 +1074,13 @@ class RobotSession(CalibrationMixin):
             except Exception:
                 logger.debug("send_action failed for %r", name, exc_info=True)
 
-    def _tick_leader_follow_unlocked(self, step: float) -> None:
-        """Copy so101_leader pose onto the follower target and send_action."""
+    def _tick_leader_follow_unlocked(self) -> None:
+        """Copy so101_leader pose onto the follower with no per-tick step cap.
+
+        Browser teleop uses RateRouter (approach 12°/tick) for safety. Classic
+        hand teleop expects near 1:1 tracking, so ``max_relative_target`` is
+        cleared here (same idea as ``lerobot-teleoperate``).
+        """
         hand = self._leader_hand
         robot = self.robots.get(ARM_FOLLOWER)
         if hand is None or robot is None:
@@ -1102,7 +1107,7 @@ class RobotSession(CalibrationMixin):
         clamped = clamp_joints(clamped)
         self._targets[ARM_FOLLOWER].update(clamped)
         action = {f"{k}.pos": float(v) for k, v in self._targets[ARM_FOLLOWER].items()}
-        robot.config.max_relative_target = self._step_for_arm(ARM_FOLLOWER, step)
+        robot.config.max_relative_target = None
         try:
             robot.send_action(action)
         except Exception:

@@ -4,13 +4,14 @@
 リポジトリに含まれない（gitignore 対象・サイズ大）。第三者が学習や推論を再現できるよう、
 Hugging Face Hub で配布する。本ページはそのアップロード／ダウンロード手順。
 
-> 現状（2026-10-26）: アップロードは未実施。下記のコマンドをオーナーが実行する。
-> 公開されたらこのページの表に repo id を記載する。
+> 現状（2026-10-26）: snake_bowl（現行 snake タスク）のみ private アップロード済み。
+> 他は未実施。公開されたらこのページの表に repo id を記載する。
 
 ## 配布物の一覧（アップロード後に記入）
 
 | 種別 | HF repo id | 内容 | 元 |
 |------|------------|------|----|
+| dataset | `kevineen/so101_single_snake_bowl_20261022_194956`（**private**） | 13 ep / 2,946 fr / 30 fps（現行 snake タスク・2026-10-23 学習データ） | `local/so101_single_snake_bowl_20261022_194956` |
 | dataset | `kevineen/so101-cobra-depth-raw` | 66 ep（curation 前・参考） | `local/so101_singlearm_pickup_cobra_20261018_205119` |
 | dataset | `kevineen/so101-cobra-curated` | 46 ep / 8,567 fr（評価 M1–M4 の学習データ） | `local/so101_singlearm_pickup_cobra_20261018_205119_curated` |
 | dataset | `kevineen/so101-cobra-rgb480` | RGB 480 派生 | `local/so101_singlearm_pickup_cobra_rgb480_20261020_225627` |
