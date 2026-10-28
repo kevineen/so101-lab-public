@@ -120,6 +120,7 @@ nav:
       - Pi4 モデル転送と推論の前提: 23_pi4_model_transfer.md
       - 学習済みモデル実機評価・選別: 24_model_eval_campaign.md
       - データセット/モデル配布（HF Hub）: 25_dataset_model_release.md
+      - GR-BC ポストトレーニング（失敗・介入活用）: 26_grbc_posttraining.md
       - ロードマップ: roadmap.md
   - チェックリスト:
       - 使い方: checklists/README.md

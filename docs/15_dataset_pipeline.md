@@ -207,6 +207,26 @@ SO101_DATASET_DELETE_LOCAL=1
 
 判断の記録: [D-20261018-07](reports/design_notes.md)。転送のタイミングと、終了処理が2回走った件は [D-20261018-08](reports/design_notes.md) と [F-20261018-02](reports/design_notes.md)。
 
+### 1c. ポリシーのロールアウトも録る（GR-BC 用） {#rollout-record}
+
+テレオペ（上記）に加えて、**学習済みモデルの評価試行そのもの**をデータセット化する経路があります。
+推論セッション（[24 §8](24_model_eval_campaign.md#infer-buttons)）を
+
+```bash
+SO101_INFER_RECORD=1 ./scripts/infer_with_buttons.sh ...
+```
+
+で起動すると、スマホの**結果ボタン（成功/失敗種別）を押した試行**が LeRobot v3.0 データセットとして
+`~/.cache/huggingface/lerobot/rollout_<...>/` に保存され、成否は `grbc_manifest.jsonl` に残ります。
+失敗試行も（むしろ主目的で）残る点がテレオペ録画と違い、GR-BC ポストトレーニング
+（[26](26_grbc_posttraining.md)）のデータプールになります。
+
+- セッション終了時の finalize まで parquet は未完成（[F-20261027-01](reports/design_notes.md)）。途中で読まない
+- 転送はテレオペと同じ offload 手順。成否ラベル（`next.reward`）の付与は GPU 側で `apps/grbc/add_reward_labels.py --sidecar` が行う
+- **2026-10-27 時点で実機未検証**。初回は数試行で確認してから本番利用
+
+判断の記録: [D-20261027-01](reports/design_notes.md)。
+
 ---
 
 ## 2. 閲覧・選別（4090 の WSL） {#dataset-review}

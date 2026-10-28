@@ -268,6 +268,12 @@ MolmoAct2 のような fork 編集は不要）。クライアントの `--action
 | MolmoAct2 | 公開 `MolmoAct2-SO100_101` は片腕スモーク可。常用は自データ FT | [10](10_molmoact2_thor.md) |
 | π0 / π0.5 / X-VLA 等 | GPU・ライセンス・データ要件が重い。ACT/SmolVLA の後 | `~/robot/lerobot/docs/source/` |
 
+### 4e. 発展 — 失敗・介入データからのポストトレーニング（GR-BC）
+
+通常の IL 学習（Step 4）が済んだあと、評価で出た**失敗ロールアウトもデータにして**
+SmolVLA を追加学習する経路が `~/robot/GR-BC` に用意してあります
+（スマホ評価に `SO101_INFER_RECORD=1` を付けるだけ。詳細は [26](26_grbc_posttraining.md)）。
+
 ---
 
 ## Step 5 — 実機推論（follower のみ）

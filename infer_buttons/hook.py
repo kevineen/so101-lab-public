@@ -28,6 +28,7 @@ from infer_buttons.serial_health import (
     release_robot_bus,
     serial_fd_status,
 )
+from infer_buttons.rollout_record import RolloutRecorder
 from infer_buttons.server import start_button_server
 from infer_buttons.status import InferStatus
 from record_buttons.preview import FramePreview
@@ -170,6 +171,12 @@ def install_phone_infer() -> None:
         if staged_nest is None:
             print("警告: nest 姿勢を読めません。スマホの nest は動きません。", flush=True)
         dt = float(getattr(self.config, "environment_dt", 1.0 / 30.0) or (1.0 / 30.0))
+        recorder = RolloutRecorder.create_if_enabled(
+            self.robot,
+            task or "",
+            fps=max(1, int(round(1.0 / dt))),
+            model=status.model_id or status.policy_type,
+        )
         last_err = [0.0]
         load_clear_at: float | None = None
         nest_was_on = False
@@ -221,6 +228,7 @@ def install_phone_infer() -> None:
                 if phase == "ready":
                     if events.get("undo_last"):
                         events["undo_last"] = False
+                        recorder.undo_last_label()
                         if status.undo_last():
                             print(
                                 f"直前の結果を取消。成功 {status.successes} / 試行 {status.trial}"
@@ -275,6 +283,9 @@ def install_phone_infer() -> None:
                         must_go = getattr(self, "must_go", None)
                         if must_go is not None:
                             must_go.set()
+                        recorder.begin_episode(
+                            {"model": status.model_id or status.policy_type, "trial": status.trial}
+                        )
                         status.begin_trial()
                         events["phase"] = "running"
                         print(
@@ -345,6 +356,7 @@ def install_phone_infer() -> None:
                             if obs is not None:
                                 preview.note_observation(obs)
                                 last_err[0] = 0.0
+                        recorder.tick()
                     except Exception as exc:
                         if is_port_busy_error(exc):
                             _recover_busy_bus(self.robot, where="running")
@@ -358,6 +370,7 @@ def install_phone_infer() -> None:
                 if phase == "result":
                     if events.get("mark_success"):
                         events["mark_success"] = False
+                        recorder.label_episode(success=True)
                         status.note_success()
                         print(
                             f"成功 {status.successes} / 試行 {status.trial}"
@@ -369,6 +382,7 @@ def install_phone_infer() -> None:
                     failure = events.get("mark_failure")
                     if failure:
                         events["mark_failure"] = None
+                        recorder.label_episode(success=False, kind=str(failure))
                         status.note_failure(str(failure))
                         print(
                             f"失敗 {failure}。成功 {status.successes} / 試行 {status.trial}"
@@ -391,6 +405,7 @@ def install_phone_infer() -> None:
                 flush=True,
             )
         finally:
+            recorder.close()
             preview.close()
             if server is not None:
                 server.stop()

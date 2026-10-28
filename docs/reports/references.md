@@ -5,14 +5,16 @@
 
 | 項目 | 値 |
 |------|-----|
-| 版 | **v0.17** |
-| 最終更新 | 2026-10-23 |
+| 版 | **v0.19** |
+| 最終更新 | 2026-10-28 |
 | 運用 | [AGENT.md](AGENT.md) §9 |
 
 ### 改訂履歴
 
 | 版 | 日付 | 内容 |
 |----|------|------|
+| v0.19 | 2026-10-28 | sim2rl 第12章 URDFオーサリング（so101_amazinghand 合体URDF実作）を R-DOC-SIM2RL-LEARN used_in に追加。**商用利用ゲート回答を記録: 同章・合体URDFは商用前提で運用（構成資産は商用OKライセンスのみ・CERN-OHL clamp と Isaac Sim EULA は参照扱い、2026-10-28 ユーザー確認）** |
+| v0.18 | 2026-10-27 | R-PAPER-GRBC · R-CODE-GRBC · R-ASSET-MCR-CKPT（GR-BC ポストトレーニング `docs/26`）。D-20261027-01 / F-20261027-01 を R-CODE-LEROBOT used_in に追加 |
 | v0.17 | 2026-10-23 | D-20261023-03 / F-20261023-01 を R-CODE-LEROBOT used_in に追加 |
 | v0.16 | 2026-10-23 | R-DOC-SO101-MODEL-EVAL。D-20261023-02 を used_in に追加 |
 | v0.15 | 2026-10-23 | D-20261023-01 を R-CODE-LEROBOT とデータセット手順の used_in に追加 |
@@ -169,7 +171,7 @@
 | year | 2024– |
 | url | https://github.com/huggingface/lerobot |
 | license | **Apache-2.0** |
-| used_in | so101-lab `vendor/lerobot` · ACT / SmolVLA / record · D-20261017-01 · D-20261018-02 · D-20261018-06 · D-20261018-07 · D-20261018-08 · D-20261018-09 · D-20261018-10 · D-20261023-01 · D-20261023-02 · D-20261023-03 · F-20261018-02 · F-20261018-03 · F-20261023-01 |
+| used_in | so101-lab `vendor/lerobot` · ACT / SmolVLA / record · D-20261017-01 · D-20261018-02 · D-20261018-06 · D-20261018-07 · D-20261018-08 · D-20261018-09 · D-20261018-10 · D-20261023-01 · D-20261023-02 · D-20261023-03 · D-20261027-01 · F-20261018-02 · F-20261018-03 · F-20261023-01 · F-20261027-01 |
 | note | ラボは fork `kevineen/lerobot`。上流 LICENSE に従う |
 
 ### R-DOC-LEROBOT-IL
@@ -286,8 +288,8 @@
 | year | 2026 |
 | url | https://github.com/kevineen/sim2rl/blob/main/docs/learn/README.md |
 | license | R-LIC-SIM2RL |
-| used_in | D-20261017-02 · D-20261018-03 · so101-lab `docs/learn` 連携 |
-| note | ローカル: `~/robot/sim2rl/docs/learn/` |
+| used_in | D-20261017-02 · D-20261018-03 · so101-lab `docs/learn` 連携 · sim2rl `docs/learn/12_urdf/`（URDFオーサリング章・so101_amazinghand合体URDF） |
+| note | ローカル: `~/robot/sim2rl/docs/learn/`。第12章の商用方針は `12_urdf/README.md` のライセンス表を参照（2026-10-28 商用前提確認済み） |
 
 ### R-PAPER-BIACT
 
@@ -418,6 +420,45 @@
 | license | N/A (paper) |
 | used_in | `docs/learn/papers.md` · `docs/22_kamino_sim.md` |
 | note | Newton Kamino ソルバ（Proximal-ADMM）の元論文。実装は [R-CODE-NEWTON](#r-code-newton) |
+
+### R-PAPER-GRBC
+
+| 欄 | 内容 |
+|----|------|
+| type | paper |
+| title | Graph-Reweighted Behavior Cloning with Human Interventions for Precise Robotic Manipulation |
+| authors / org | Xiaoman Li, Zhiqiang Yang, Jiayu Hu, et al. / Chenjia Bai ら（Gamma-Robot） |
+| year | 2026 |
+| url | https://arxiv.org/abs/2610.20504 |
+| license | N/A (paper) |
+| used_in | `docs/26_grbc_posttraining.md` · `~/robot/GR-BC`（nview fork） |
+| note | CoRL 2026 採択。プロジェクトページ https://gr-bc.github.io 。失敗・介入含むロールアウトからグラフ再重み付けで VLA をポストトレーニング。実装は [R-CODE-GRBC](#r-code-grbc) |
+
+### R-CODE-GRBC
+
+| 欄 | 内容 |
+|----|------|
+| type | code |
+| title | GR-BC official implementation（LeRobot 0.4.4 バンドル） |
+| authors / org | Gamma-Robot |
+| year | 2026 |
+| url | https://github.com/Gamma-Robot/GR-BC |
+| license | **Apache-2.0**（`LICENSE` · `NOTICE`） |
+| used_in | `docs/26_grbc_posttraining.md` · `~/robot/GR-BC`（fork `kevineen/GR-BC` · `nview` ブランチ）· D-20261027-01 |
+| note | fork 差分: `--cameras` の N 視点化（upstream は cam_0/1/2 の 3 視点固定）· `min_camera_hits=None`（全視点一致則の一般化）· `tests/grbc/test_nview.py`。コード自体の商用は OK。重みの制約は [R-ASSET-MCR-CKPT](#r-asset-mcr-ckpt) |
+
+### R-ASSET-MCR-CKPT
+
+| 欄 | 内容 |
+|----|------|
+| type | asset |
+| title | MCR ResNet50 checkpoint（robots-pretrain-robots） |
+| authors / org | GqJiang（Hugging Face） |
+| year | 2026 |
+| url | https://huggingface.co/GqJiang/robots-pretrain-robots （ファイル `mcr_resnet50.pth`） |
+| license | **HF リポにライセンス表記なし → 全権留保前提。商用不可扱い（要確認）**（ゲート正本: `~/robot/AGENTS.md` 商用要注意リスト） |
+| used_in | GR-BC グラフ構築の特徴抽出（`grbc-export --mcr-ckpt`）· `docs/26_grbc_posttraining.md` |
+| note | 94,345,861 bytes。`~/robot/GR-BC/checkpoints/mcr/` に配置（HF キャッシュへの symlink）。研究利用は可。GitHub 側 `robots-pretrain-robots` は MIT だが HF 重みリポは無表記のため要確認のまま |
 
 ---
 

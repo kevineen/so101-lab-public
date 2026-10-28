@@ -233,6 +233,12 @@ Thor のログに `Policy type: ... | Pretrained name or path: ...` が出てか
 
 初回の推論チャンクは GPU 共有時に **約10秒** かかることがあります。それ以降も動かないときはシリアル詰まりを疑い、セッション終了→ nest → 再起動します。
 
+**ロールアウトの記録（GR-BC 用・オプション）**: 起動時に `SO101_INFER_RECORD=1` を付けると、
+結果ボタンで確定した各試行が LeRobot v3.0 データセットとして録画され、成否は
+`grbc_manifest.jsonl` に追記されます（失敗種別も記録。取り消しは manifest 側も無効化）。
+評価フロー自体は変わりません。データの取り回しと注意は [15 §1c](15_dataset_pipeline.md#rollout-record)、
+使う側の手順は [26](26_grbc_posttraining.md)。**実機での初回確認はまだ**（[D-20261027-01](reports/design_notes.md)）。
+
 判断の記録: [D-20261023-02](reports/design_notes.md)。
 
 ---

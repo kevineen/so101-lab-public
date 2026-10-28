@@ -5,14 +5,15 @@
 
 | 項目 | 値 |
 |------|-----|
-| 版 | **v0.16** |
-| 最終更新 | 2026-10-23 |
+| 版 | **v0.17** |
+| 最終更新 | 2026-10-27 |
 | 運用 | [AGENT.md](AGENT.md) §9 · [references.md](references.md) |
 
 ### 改訂履歴
 
 | 版 | 日付 | 内容 |
 |----|------|------|
+| v0.17 | 2026-10-27 | D-20261027-01: GR-BC 導入（N 視点化・ロールアウト録画 opt-in・報酬ラベリング）。F-20261027-01: v3.0 parquet は finalize まで未完成 |
 | v0.16 | 2026-10-23 | F-20261023-01 / D-20261023-03: Feetech `is_using` 固まりとスマホ「バス復旧」 |
 | v0.15 | 2026-10-23 | D-20261023-02: 推論をスマホ（8771）で試行開始・一時停止・成功／失敗記録 |
 | v0.14 | 2026-10-23 | D-20261023-01: 残す／捨てるのあとリセット「成功」を挟まず開始待ちへ |
@@ -117,6 +118,20 @@
 | keep? | 条件付き（シード拡大が TODO T-P1-01）。trace は非対応と明記 |
 | refs | R-PAPER-SGS, R-DOC-SGS |
 | evidence | `sim2rl/docs/sgs.md` §8 |
+
+### D-20261027-01 — GR-BC 導入: 2 視点化・opt-in ロールアウト録画・報酬ラベリング
+
+| 欄 | 内容 |
+|----|------|
+| kind | `design` |
+| date | 2026-10-27 |
+| context | 片腕 IL の発展（失敗・介入データ活用）· `~/robot/GR-BC`（fork `nview` ブランチ）· docs/26 |
+| what | ① upstream の 3 視点固定（`--cameras nargs=3`・`camera_count=3`・キャッシュ 6144 次元検証・`min_camera_hits<=3`）を N 視点に一般化。`min_camera_hits` の既定を None＝全視点一致にして 3 視点時の論文則を保存。② スマホ評価（infer_buttons）に `SO101_INFER_RECORD=1` でロールアウト録画を opt-in 追加。`robot.send_action` を tee して実指示アクションを記録、結果ボタンでエピソード確定し `grbc_manifest.jsonl` に成否を残す（未採点は破棄・ラベル捏造なし）。③ `apps/grbc/add_reward_labels.py` で lerobot フォークの `modify_features` を使い `next.reward`/`next.done` 付きコピーを作成 |
+| why | GR-BC のデータ要件（LeRobot v3.0 + フレーム単位スパース成功ラベル）とラボの実況（2 カメラ・スマホ採点・報酬列なし）のギャップを、既存フローを壊さずに埋める。Pi+Jetson 構成ではフォークの `lerobot-rollout`（dagger/episodic 戦略）が使えないため infer_buttons を拡張 |
+| outcome | GR-BC 側テスト 58 件合格（`tests/grbc/test_nview.py` 追加）。teamB（20ep・1 視点）で grbc-export: 到達率 1.0・重み生成。USE_GRBC=true/false で 20 ステップ学習完了（4090）。infer_buttons テスト 24 件合格。**実機での録画セッションは未検証**（初回は数試行で様子見） |
+| keep? | 採用。録画は既定オフ（従来評価は完全不変）。効果検証は全成功デモでは不可能で、失敗ロールアウトが混ざる反復から。2 視点は論文設定外の改変で、効果が出なければ 3 台目カメラ追加を再検討。テスト用カメラは 96×128 以上必要（SVT-AV1 の最小 64×64 未満で C レベル FPE 落ち） |
+| refs | R-PAPER-GRBC, R-CODE-GRBC, R-ASSET-MCR-CKPT, R-CODE-LEROBOT |
+| evidence | `~/robot/GR-BC`（commit 8cfd460/930e3b4）· `apps/grbc/add_reward_labels.py` · `infer_buttons/rollout_record.py` · `infer_buttons/tests/test_rollout_record.py` · `docs/26_grbc_posttraining.md` |
 
 ---
 
@@ -443,6 +458,20 @@
 | keep? | この Pi で ACT を計算しない。パッチは venv の site-packages なので、作り直したらスクリプトを再実行する |
 | refs | R-CODE-LEROBOT, R-ALG-TORCH, R-DOC-SO101-ACT-RUNBOOK |
 | evidence | Pi: `vendor/lerobot/.venv` の torch `2.11.0+cu128`。Thor: `draccus/wrappers/field_wrapper.py` をその venv だけ修正。手順 `docs/17_act_record_train_infer.md` |
+
+### F-20261027-01 — v3.0 データセットの parquet は finalize まで読めない
+
+| 欄 | 内容 |
+|----|------|
+| kind | `failed` |
+| date | 2026-10-27 |
+| context | GR-BC ロールアウト録画の単体テスト · `infer_buttons/rollout_record.py` · lerobot フォーク v0.6.2 |
+| what | `LeRobotDataset.create` → `save_episode` の直後に pandas で `data/**/*.parquet` を読むと `Parquet magic bytes not found in footer` で失敗。ファイルはヘッダ（PAR1）だけ書かれ、フッタが無い |
+| why | v3.0 の DatasetWriter は parquet をストリーム書き込みしており、フッタ（メタデータ）は `LeRobotDataset.finalize()` で閉じるときに初めて書かれる。`save_episode` の戻り時点ではデータファイルは未完成 |
+| outcome | `RolloutRecorder.close()` で `finalize()` を呼ぶように修正（`LeRobotDataset.finalize` の docstring も "otherwise the dataset will be invalid" と明記）。テストは close 後に検証して 5 件合格 |
+| keep? | 失敗として残す。**録画・変換スクリプトで v3.0 データセットを書いたら、読む前に必ず finalize**。セッション途中のデータセットディレクトリを読まない運用（docs/26 に明記済み） |
+| refs | R-CODE-LEROBOT |
+| evidence | `infer_buttons/rollout_record.py` `close()` · `lerobot/src/lerobot/datasets/lerobot_dataset.py` `finalize()` docstring · `infer_buttons/tests/test_rollout_record.py` |
 
 ---
 

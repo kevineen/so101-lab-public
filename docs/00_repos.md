@@ -8,9 +8,10 @@
 ~/robot/
   so101-lab/       ← 実験・運用のメイン（private: kevineen/so101-lab）★ここ
   lerobot/         ← LeRobot フォーク（kevineen/lerobot）。upstream は Hugging Face
+  GR-BC/           ← GR-BC フォーク（kevineen/GR-BC, nview ブランチ）。VLA ポストトレーニング
   sim2rl/          ← シム・RL の教科書（強化学習・Sim2Real・論文 IL）
   LIBERO-plus/     ← LIBERO ベンチマークのフォーク（parc/ に PARC 競技ワークスペース）
-  leisaac/         ← IsaacLab 拡張テンプレート（休止中）
+  leisaac/         ← IsaacLab 拡張テンプレート（休止中 → ~/robot_archive へ退避済み）
   IsaacLab/        ← 上流クローン（変更しない）
   IsaacTeleop/     ← 上流クローン（変更しない）
   TurboVLA/        ← 上流クローン（VLA モデル・チェックポイント）
@@ -20,6 +21,7 @@
 |------|------|--------|
 | `so101-lab/` | SO-101 ラボ（Web Remote、実験 apps、docs、configs）＋実機 IL 学習コース | `kevineen/so101-lab`（**private**） |
 | `~/robot/lerobot/` | LeRobot 本体の作業コピー（venv・コアライブラリ）。FRS/TurboVLA 実験 | `kevineen/lerobot`（origin） |
+| `GR-BC/` | GR-BC（失敗・介入含むロールアウトからの VLA ポストトレーニング）。fork の `nview` ブランチで 2 視点対応。環境は `.venv311`（[docs/26](26_grbc_posttraining.md)） | `kevineen/GR-BC`（fork） |
 | `sim2rl/` | シミュレータ・強化学習・Sim2Real の学習・実験リポ（[docs/learn](../../sim2rl/docs/learn/README.md) と相互リンク） | `kevineen/sim2rl` |
 | `LIBERO-plus/parc/` | PARC 競技ワークスペース（VR テレオペ、学習キュー、fleet、Web UI） | `kevineen/LIBERO-plus` |
 | `leisaac/` | IsaacLab 拡張テンプレート（休止中） | `kevineen/leisaac` |

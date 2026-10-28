@@ -80,6 +80,7 @@ graph TD
 | Sim2Real・実機チェック | **sim2rl** [07_sim2real](../../../sim2rl/docs/learn/07_sim2real/README.md) | 本 02 の安全・独占 + [14](../14_single_arm_il.md) |
 | ACT / Diffusion の手法位置 | **sim2rl** [rl_methods.md](../../../sim2rl/docs/learn/rl_methods.md) · [09 Bi-ACT](../../../sim2rl/docs/learn/09_advanced/05_paper_biact.md) | 本 01・02 |
 | 双腕の設計レベル | **sim2rl** [09 dual_arm](../../../sim2rl/docs/learn/09_advanced/02_dual_arm.md) | 本 05 + ラボ [10](../10_molmoact2_thor.md) |
+| 自分の機体・エンドエフェクタをURDFにする | **sim2rl** [12_urdf](../../../sim2rl/docs/learn/12_urdf/README.md)（URDFオーサリング。SO-101×AmazingHand合体URDFの実作込み） | ラボ [12 mujoco_sim](../12_mujoco_sim.md)（実機可動域・干渉チェック） |
 
 > 💡 **先生の一言**: sim2rl で「観測・行動・学習ループ」の語彙を先に揃えると、
 > LeRobot の `lerobot-record` / `lerobot-train` が突然の呪文に見えなくなります。
